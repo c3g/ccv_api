@@ -1,0 +1,5 @@
+# -*- coding: utf-8 -*-
+
+DEFAULT_COLUMN_LENGTH = 50
+
+NAME_LENGTH_MAX = 100

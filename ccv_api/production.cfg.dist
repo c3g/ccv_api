@@ -1,0 +1,15 @@
+[general]
+DEBUG: False
+TEMPLATE_DEBUG: False
+DEBUG_PROPAGATE_EXCEPTIONS: False
+SERVER_TIMEZONE ='UTC'
+
+[security]
+SECRET_KEY:
+
+[database]
+NAME:
+USER:
+PASSWORD;
+HOST:
+PORT:

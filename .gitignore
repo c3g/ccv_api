@@ -173,3 +173,10 @@ dmypy.json
 # Ignore all local history of files
 .history
 
+
+# Virtual Environment
+venv/
+env/
+.idea
+/ccv_api/development.cfg
+/ccv_api/production.cfg
