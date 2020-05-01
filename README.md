@@ -33,7 +33,7 @@ CCV API is a Django-based backed system to query the available CCVs.
     cp ccv_api/development.cfg.dist ccv_api/development.cfg 
     ```
 5. Create a new postgres database and configure credentials in the config file.
-    ```
+    ```editorconfig
     [database]  
     NAME: db_name
     USER: db_user
