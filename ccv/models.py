@@ -97,13 +97,15 @@ class Identification(Base):
     date_of_birth = YearlessDateField()
     sex = models.CharField(max_length=20, choices=SEX_CHOICES, null=True, blank=True)
     designated_group = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, choices=DESIGNATED_GROUP_CHOICES, null=True,
-                                        blank=True)
+                                        blank=True, help_text="Group designated by the Employment Equity Act of Canada")
     correspondence_language = models.CharField(max_length=10, choices=CORRESPONDENCE_LANGUAGE_CHOICES)
     canadian_residency_status = models.CharField(max_length=DEFAULT_COLUMN_LENGTH,
                                                  choices=CANADIAN_RESIDENCY_STATUS_CHOICES, null=True, blank=True)
     permanent_residency = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, choices=PERMANENT_RESIDENCY_CHOICES,
                                            null=True, blank=True)
     permanent_residency_start_date = models.DateField(null=True, blank=True)
+
+    personal_information = models.OneToOneField(PersonalInformation, on_delete=models.CASCADE)
 
     class Meta:
         db_table = "identification"
@@ -124,15 +126,15 @@ class LanguageSkill(Base):
 
     language = models.CharField(max_length=20, null=True, blank=True,
                                 help_text="The language in which the person is indicating a competency.")
-    can_read = models.BooleanField(default=False, null=True, blank=True,
+    can_read = models.BooleanField(default=False, null=True,
                                    help_text="The capacity of the person to comprehend the indicated language in "
                                              "written form.")
-    can_write = models.BooleanField()
-    can_speak = models.BooleanField()
-    can_understand = models.BooleanField()
-    peer_review = models.BooleanField()
+    can_write = models.BooleanField(default=False)
+    can_speak = models.BooleanField(default=False)
+    can_understand = models.BooleanField(default=False)
+    peer_review = models.BooleanField(null=True, blank=True)
 
-    personal_information = models.ForeignKey(PersonalInformation, on_delete=models.CASCADE)
+    personal_information = models.ForeignKey(PersonalInformation, on_delete=models.DO_NOTHING)
 
     class Meta:
         db_table = "language_skill"
@@ -149,17 +151,23 @@ class Address(Base):
         ('Temporary', 'Temporary')
     )
 
-    type = models.CharField(max_length=20, choices=ADDRESS_TYPE_CHOICES)
-    line_1 = models.CharField(max_length=DEFAULT_COLUMN_LENGTH)
-    line_2 = models.CharField(max_length=DEFAULT_COLUMN_LENGTH)
-    line_3 = models.CharField(max_length=DEFAULT_COLUMN_LENGTH)
-    line_4 = models.CharField(max_length=DEFAULT_COLUMN_LENGTH)
-    line_5 = models.CharField(max_length=DEFAULT_COLUMN_LENGTH)
-    city = models.CharField(max_length=DEFAULT_COLUMN_LENGTH)
-    # location
-    postal = models.CharField(max_length=10)
-    start_date = models.DateField()
-    end_date = models.DateField()
+    type = models.CharField(max_length=20, choices=ADDRESS_TYPE_CHOICES, null=True, blank=True,
+                            help_text="The nature and intended use of the given address")
+    line_1 = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                              help_text="The exact location, number and street name for the given address")
+    line_2 = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True)
+    line_3 = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True)
+    line_4 = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True)
+    line_5 = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True)
+    city = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                            help_text="The municipal component (city, town, etc.) of the given address")
+    country = models.CharField(max_length=50, null=True, blank=True)
+    subdivision = models.CharField(max_length=50, null=True, blank=True)
+    postal = models.CharField(max_length=10, null=True, blank=True, help_text="The postal code of the given address")
+    start_date = models.DateField(null=True, blank=True,
+                                  help_text="If the given address is temporary, the date upon which it becomes active")
+    end_date = models.DateField(null=True, blank=True,
+                                help_text="If the given address is temporary, the date upon which it becomes inactive")
 
     personal_information = models.ForeignKey(PersonalInformation, on_delete=models.DO_NOTHING)
 
@@ -180,14 +188,23 @@ class Telephone(Base):
         ('Work', 'Work')
     )
 
-    phone_type = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, choices=PHONE_TYPE_CHOICES)
-    country_code = models.CharField(max_length=5, null=True)
-    area_code = models.CharField(max_length=5, null=True)
-    number = models.CharField(max_length=12, null=True)
-    extension = models.CharField(max_length=6, null=True)
-    start_date = models.DateField()  # only valid when phone type is temporary
-    end_date = models.DateField()  # only valid when phone type is temporary
-    personal_information = models.ForeignKey(PersonalInformation, on_delete=models.CASCADE)
+    phone_type = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, choices=PHONE_TYPE_CHOICES, null=True, blank=True,
+                                  help_text="The nature of the given phone number")
+    country_code = models.CharField(max_length=5, null=True, blank=True,
+                                    help_text="The country code with no space, bracket or dash, if located outside of "
+                                              "North America e.g. 011")
+    area_code = models.CharField(max_length=5, null=True, blank=True,
+                                 help_text="The area code with no space, bracket or dash e.g. 613")
+    number = models.CharField(max_length=12, null=True, blank=True,
+                              help_text="The telephone number with no space, bracket or dash e.g. 1234567")
+    extension = models.CharField(max_length=6, null=True, blank=True,
+                                 help_text="The extension, if applicable, with no space, bracket or dash e.g. 5678")
+    start_date = models.DateField(null=True, blank=True,
+                                  help_text="If the given number is temporary, the date upon which it becomes active")
+    end_date = models.DateField(null=True, blank=True,
+                                help_text="If the given number is temporary, the date upon which it becomes inact")
+
+    personal_information = models.ForeignKey(PersonalInformation, on_delete=models.DO_NOTHING)
 
     class Meta:
         db_table = "telephone"
@@ -202,10 +219,13 @@ class Email(Base):
         ('Work', 'Work'),
     )
 
-    type = models.CharField(max_length=10, choices=TYPE_CHOICES)
-    address = models.CharField(max_length=100)
-    start_date = models.DateField()  # only valid when email type is temporary
-    end_date = models.DateField()  # only valid when email type is temporary
+    type = models.CharField(max_length=10, choices=TYPE_CHOICES, null=True, blank=True,
+                            help_text="The nature of the given e-mail")
+    address = models.CharField(max_length=100, null=True, blank=True, help_text="The person's e-mail address")
+    start_date = models.DateField(null=True, blank=True,
+                                  help_text="If the given e-mail is temporary, the date upon which it becomes active")
+    end_date = models.DateField(null=True, blank=True,
+                                help_text="If the given e-mail is temporary, the date upon which it becomes inactive")
 
     personal_information = models.ForeignKey(PersonalInformation, on_delete=models.CASCADE)
 
@@ -224,10 +244,11 @@ class Website(Base):
         ('Social Media', 'Social Media')
     )
 
-    type = models.CharField(max_length=20, choices=TYPE_CHOICES)
-    url = models.CharField(max_length=100, null=True)
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES, null=True, blank=True,
+                            help_text="The nature of the given web address")
+    url = models.CharField(max_length=100, null=True, blank=True, help_text="The person's web address")
 
-    personal_information = models.ForeignKey(PersonalInformation, on_delete=models.CASCADE)
+    personal_information = models.ForeignKey(PersonalInformation, on_delete=models.DO_NOTHING)
 
     class Meta:
         db_table = "website"
@@ -266,35 +287,31 @@ class Degree(Base):
         ('Withdrawn', 'Withdrawn')
     )
 
-    type = models.CharField(max_length=30, choices=TYPE_CHOICES, null=True, blank=True)
-    name = models.CharField(max_length=NAME_LENGTH_MAX, null=True, blank=True)
-    specialization = models.CharField(max_length=100, null=True, blank=True)
-    thesis_title = models.TextField(max_length=500, null=True, blank=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES)
-    start_date = models.DateField(null=True, blank=True)
-    end_date = models.DateField(null=True, blank=True)
-    expected_date = models.DateField(null=True, blank=True)
-    phd_without_masters = models.BooleanField(default=False, null=True, blank=True)
+    type = models.CharField(max_length=30, choices=TYPE_CHOICES, null=True, blank=True,
+                            help_text="The designation of the person's degree")
+    name = models.CharField(max_length=NAME_LENGTH_MAX, null=True, blank=True,
+                            help_text="The name of the person's degree program")
+    specialization = models.CharField(max_length=100, null=True, blank=True, help_text="person's major course of study")
+    thesis_title = models.TextField(max_length=500, null=True, blank=True,
+                                    help_text="itle of the person’s thesis project")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, null=True, blank=True,
+                              help_text="Indicates whether or not the person's degree is completed")
+    start_date = models.DateField(null=True, blank=True, help_text="The date the person's study began")
+    end_date = models.DateField(null=True, blank=True, help_text="The date the person's study was completed")
+    expected_date = models.DateField(null=True, blank=True,
+                                     help_text="If the person's study is not complete, the date completion is expected")
+    phd_without_masters = models.BooleanField(default=False, null=True, blank=True,
+                                              help_text="If doctorate degree, did the person transfer "
+                                                        "directly to this degree without completing a Masters?")
+
+    organization = models.OneToOneField(Organization, on_delete=models.CASCADE, null=True, blank=True,
+                                        help_text="The institution that conferred the degree.")
+    other_organization = models.OneToOneField(OtherOrganization, on_delete=models.CASCADE, null=True, blank=True,)
 
     education = models.ForeignKey(Education, on_delete=models.DO_NOTHING)
 
     class Meta:
         db_table = "degree"
-
-
-class Credential(Base):
-    """A designation earned to assure qualification to perform a job or task such as a certification,
-    an accreditation, a designation, etc. """
-
-    title = models.TextField(max_length=250, null=True, blank=True,
-                             help_text="The name or title of the designation earned")
-    effective_date = models.DateField(null=True, blank=True, help_text="The date the designation was received")
-    end_date = models.DateField(null=True, blank=True, help_text="The date the designation expires, if applicable")
-    description = models.TextField(max_length=1000, null=True, blank=True,
-                                   help_text="A description of the person's designation")
-
-    class Meta:
-        db_table = "credential"
 
 
 class Supervisor(Base):
@@ -309,6 +326,57 @@ class Supervisor(Base):
 
     class Meta:
         db_table = "supervisor"
+
+
+class Credential(Base):
+    """A designation earned to assure qualification to perform a job or task such as a certification,
+    an accreditation, a designation, etc. """
+
+    title = models.TextField(max_length=250, null=True, blank=True,
+                             help_text="The name or title of the designation earned")
+    effective_date = models.DateField(null=True, blank=True, help_text="The date the designation was received")
+    end_date = models.DateField(null=True, blank=True, help_text="The date the designation expires, if applicable")
+    description = models.TextField(max_length=1000, null=True, blank=True,
+                                   help_text="A description of the person's designation")
+
+    organization = models.OneToOneField(Organization, on_delete=models.CASCADE, null=True, blank=True,
+                                        help_text="The organization that conferred this credential")
+    other_organization = models.OneToOneField(OtherOrganization, on_delete=models.CASCADE, null=True, blank=True)
+
+    education = models.ForeignKey(Education, on_delete=models.DO_NOTHING)
+
+    class Meta:
+        db_table = "credential"
+
+
+class Recognition(Base):
+    """Recognitions are any acknowledgments, appreciations and monetary rewards that were obtained and which were not"""
+    TYPE_CHOICES = (
+        ('Citation', 'Citation'),
+        ('Distinction', 'Distinction'),
+        ('Honor', 'Honor'),
+        ('Prize / Award', 'Prize / Award')
+    )
+
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES, null=True, blank=True)
+    name = models.TextField(max_length=250, null=True, blank=True, help_text="The name or title of the recognition")
+    effective_date = models.DateField(null=True, blank=True, help_text="The date when the recognition was awarded")
+    end_date = models.DateField(null=True, blank=True, help_text="The date when this recognition expires")
+    amount = models.IntegerField(null=True, blank=True, help_text="The amount that was awarded for this recognition")
+    amount_in_canadian_dollar = models.IntegerField(null=True, blank=True, help_text="Amount in CAN $")
+    currency = models.CharField(max_length=50, null=True, blank=True,
+                                help_text="The currency in which the money was awarded")
+
+    organization = models.OneToOneField(Organization, on_delete=models.CASCADE, null=True, blank=True,
+                                        help_text="The organization that gave the recognition")
+    other_organization = models.OneToOneField(OtherOrganization, on_delete=models.CASCADE, null=True, blank=True,)
+
+    def save(self, *args, **kwargs):
+        # TODO: Add amount conversion logic in CAN $
+        super().save(*args, **kwargs)
+
+    class Meta:
+        db_table = "recognition"
 
 
 class UserProfile(Base):
@@ -542,8 +610,8 @@ class AcademicWorkExperience(Base):
     tenure_end_date = models.DateField(null=True, blank=True, help_text="The date when the tenure stopped, "
                                                                         "if applicable")
 
-    organization = models.OneToOneField(Organization, on_delete=models.CASCADE)
-    other_organization = models.OneToOneField(OtherOrganization, on_delete=models.CASCADE)
+    organization = models.OneToOneField(Organization, on_delete=models.CASCADE, null=True, blank=True)
+    other_organization = models.OneToOneField(OtherOrganization, on_delete=models.CASCADE, null=True, blank=True,)
 
     employment = models.ForeignKey(Employment, on_delete=models.CASCADE)
 
@@ -936,6 +1004,7 @@ class ResearchDiscipline(Base):
 
     degree = models.ForeignKey(Degree, null=True, blank=True, on_delete=models.CASCADE)
     credential = models.ForeignKey(Credential, null=True, blank=True, on_delete=models.CASCADE)
+    recognition = models.ForeignKey(Recognition, null=True, blank=True, on_delete=models.CASCADE)
     research_funding_history = models.ForeignKey(ResearchFundingHistory, on_delete=models.CASCADE)
     academic_work_experience = models.ForeignKey(AcademicWorkExperience, on_delete=models.CASCADE)
     non_academic_work_experience = models.ForeignKey(NonAcademicWorkExperience, on_delete=models.CASCADE)
@@ -957,6 +1026,7 @@ class AreaOfResearch(Base):
 
     degree = models.ForeignKey(Degree, null=True, blank=True, on_delete=models.CASCADE)
     credential = models.ForeignKey(Credential, null=True, blank=True, on_delete=models.CASCADE)
+    recognition = models.ForeignKey(Recognition, null=True, blank=True, on_delete=models.CASCADE)
     research_funding_history = models.ForeignKey(ResearchFundingHistory, on_delete=models.CASCADE)
     academic_work_experience = models.ForeignKey(AcademicWorkExperience, on_delete=models.CASCADE)
     non_academic_work_experience = models.ForeignKey(NonAcademicWorkExperience, on_delete=models.CASCADE)
@@ -975,6 +1045,7 @@ class FieldOfApplication(Base):
 
     degree = models.ForeignKey(Degree, null=True, blank=True, on_delete=models.CASCADE)
     credential = models.ForeignKey(Credential, null=True, blank=True, on_delete=models.CASCADE)
+    recognition = models.ForeignKey(Recognition, null=True, blank=True, on_delete=models.CASCADE)
     research_funding_history = models.ForeignKey(ResearchFundingHistory, on_delete=models.CASCADE)
     academic_work_experience = models.ForeignKey(AcademicWorkExperience, on_delete=models.CASCADE)
     non_academic_work_experience = models.ForeignKey(NonAcademicWorkExperience, on_delete=models.CASCADE)

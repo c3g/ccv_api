@@ -15,7 +15,7 @@ CCV API is a Django-based backed system to query the available CCVs.
 ## Installation 
 1. Clone the repository
     ```bash
-     git clone https://github.com/c3g/fms.git
+     git clone https://github.com/c3g/ccv_api.git
     ```
   
 2. Create a virtual environment with Python 3 or later, and activate it 
