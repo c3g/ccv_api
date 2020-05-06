@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from django.db import models
-from .constants.db_constants import DEFAULT_COLUMN_LENGTH, NAME_LENGTH_MAX
-from .utils import normalize_string
 from django.contrib.postgres.fields import ArrayField
 from djangoyearlessdate.models import YearlessDateField
+from .constants.db_constants import DEFAULT_COLUMN_LENGTH, NAME_LENGTH_MAX
+from .utils import normalize_string
 
 
 # TODO: Indexing the fields which will be used as filters in searching the CCVs
@@ -246,7 +246,7 @@ class Website(Base):
 
     type = models.CharField(max_length=20, choices=TYPE_CHOICES, null=True, blank=True,
                             help_text="The nature of the given web address")
-    url = models.CharField(max_length=100, null=True, blank=True, help_text="The person's web address")
+    url = models.URLField(max_length=100, null=True, blank=True, help_text="The person's web address")
 
     personal_information = models.ForeignKey(PersonalInformation, on_delete=models.DO_NOTHING)
 
