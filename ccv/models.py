@@ -28,9 +28,6 @@ class Organization(Base):
     country = models.CharField(max_length=50, null=True, blank=True)
     subdivision = models.CharField(max_length=50, null=True, blank=True)
 
-    class Meta:
-        db_table = "organization"
-
 
 class OtherOrganization(Base):
     type = models.CharField(max_length=20, null=True, blank=True,
@@ -38,19 +35,11 @@ class OtherOrganization(Base):
     name = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
                             help_text="The organization's name, only if not in Organization list")
 
-    class Meta:
-        db_table = "other_organization"
-
-
-class PersonalInformation(Base):
-    """Information about the person that facilitates identification, including name, date of birth, and sex"""
-
-    class Meta:
-        db_table = "personal_information"
-
 
 class Identification(Base):
-    """Collections of information records that, in combination, present an overall personal identification of person."""
+    """Information about the person that facilitates personal identification of person, including name,
+    date of birth, and sex """
+
     TITLE_CHOICES = (
         ('Dr.', 'Dr.'),
         ('Mr.', 'Mr.'),
@@ -105,20 +94,12 @@ class Identification(Base):
                                            null=True, blank=True)
     permanent_residency_start_date = models.DateField(null=True, blank=True)
 
-    personal_information = models.OneToOneField(PersonalInformation, on_delete=models.CASCADE)
-
-    class Meta:
-        db_table = "identification"
-
 
 class CountryOfCitizenship(Base):
     name = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
                             help_text="List all countries that the person is a citizen of")
 
     identification = models.ForeignKey(Identification, on_delete=models.CASCADE)
-
-    class Meta:
-        db_table = "country_of_citizenship"
 
 
 class LanguageSkill(Base):
@@ -134,10 +115,7 @@ class LanguageSkill(Base):
     can_understand = models.BooleanField(default=False)
     peer_review = models.BooleanField(null=True, blank=True)
 
-    personal_information = models.ForeignKey(PersonalInformation, on_delete=models.DO_NOTHING)
-
-    class Meta:
-        db_table = "language_skill"
+    personal_information = models.ForeignKey(Identification, on_delete=models.DO_NOTHING)
 
 
 class Address(Base):
@@ -169,10 +147,7 @@ class Address(Base):
     end_date = models.DateField(null=True, blank=True,
                                 help_text="If the given address is temporary, the date upon which it becomes inactive")
 
-    personal_information = models.ForeignKey(PersonalInformation, on_delete=models.DO_NOTHING)
-
-    class Meta:
-        db_table = "address"
+    personal_information = models.ForeignKey(Identification, on_delete=models.DO_NOTHING)
 
 
 class Telephone(Base):
@@ -204,10 +179,7 @@ class Telephone(Base):
     end_date = models.DateField(null=True, blank=True,
                                 help_text="If the given number is temporary, the date upon which it becomes inact")
 
-    personal_information = models.ForeignKey(PersonalInformation, on_delete=models.DO_NOTHING)
-
-    class Meta:
-        db_table = "telephone"
+    personal_information = models.ForeignKey(Identification, on_delete=models.DO_NOTHING)
 
 
 class Email(Base):
@@ -227,10 +199,7 @@ class Email(Base):
     end_date = models.DateField(null=True, blank=True,
                                 help_text="If the given e-mail is temporary, the date upon which it becomes inactive")
 
-    personal_information = models.ForeignKey(PersonalInformation, on_delete=models.CASCADE)
-
-    class Meta:
-        db_table = "email"
+    personal_information = models.ForeignKey(Identification, on_delete=models.CASCADE)
 
 
 class Website(Base):
@@ -248,18 +217,14 @@ class Website(Base):
                             help_text="The nature of the given web address")
     url = models.URLField(max_length=100, null=True, blank=True, help_text="The person's web address")
 
-    personal_information = models.ForeignKey(PersonalInformation, on_delete=models.DO_NOTHING)
-
-    class Meta:
-        db_table = "website"
+    personal_information = models.ForeignKey(Identification, on_delete=models.DO_NOTHING)
 
 
 class Education(Base):
     """Collection of information records that, in combination, represent the full and up-to-date history of the
     person's education """
 
-    class Meta:
-        db_table = "education"
+    pass
 
 
 class Degree(Base):
@@ -292,8 +257,8 @@ class Degree(Base):
     name = models.CharField(max_length=NAME_LENGTH_MAX, null=True, blank=True,
                             help_text="The name of the person's degree program")
     specialization = models.CharField(max_length=100, null=True, blank=True, help_text="person's major course of study")
-    thesis_title = models.TextField(max_length=500, null=True, blank=True,
-                                    help_text="itle of the person’s thesis project")
+    thesis_title = models.CharField(max_length=500, null=True, blank=True,
+                                    help_text="title of the person’s thesis project")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, null=True, blank=True,
                               help_text="Indicates whether or not the person's degree is completed")
     start_date = models.DateField(null=True, blank=True, help_text="The date the person's study began")
@@ -310,9 +275,6 @@ class Degree(Base):
 
     education = models.ForeignKey(Education, on_delete=models.DO_NOTHING)
 
-    class Meta:
-        db_table = "degree"
-
 
 class Supervisor(Base):
     """The persons responsible for mentoring, advising and guiding the student academically throughout this degree
@@ -324,19 +286,16 @@ class Supervisor(Base):
 
     degree = models.ForeignKey(Degree, on_delete=models.DO_NOTHING)
 
-    class Meta:
-        db_table = "supervisor"
-
 
 class Credential(Base):
     """A designation earned to assure qualification to perform a job or task such as a certification,
     an accreditation, a designation, etc. """
 
-    title = models.TextField(max_length=250, null=True, blank=True,
+    title = models.CharField(max_length=250, null=True, blank=True,
                              help_text="The name or title of the designation earned")
     effective_date = models.DateField(null=True, blank=True, help_text="The date the designation was received")
     end_date = models.DateField(null=True, blank=True, help_text="The date the designation expires, if applicable")
-    description = models.TextField(max_length=1000, null=True, blank=True,
+    description = models.CharField(max_length=1000, null=True, blank=True,
                                    help_text="A description of the person's designation")
 
     organization = models.OneToOneField(Organization, on_delete=models.CASCADE, null=True, blank=True,
@@ -344,9 +303,6 @@ class Credential(Base):
     other_organization = models.OneToOneField(OtherOrganization, on_delete=models.CASCADE, null=True, blank=True)
 
     education = models.ForeignKey(Education, on_delete=models.DO_NOTHING)
-
-    class Meta:
-        db_table = "credential"
 
 
 class Recognition(Base):
@@ -359,7 +315,7 @@ class Recognition(Base):
     )
 
     type = models.CharField(max_length=20, choices=TYPE_CHOICES, null=True, blank=True)
-    name = models.TextField(max_length=250, null=True, blank=True, help_text="The name or title of the recognition")
+    name = models.CharField(max_length=250, null=True, blank=True, help_text="The name or title of the recognition")
     effective_date = models.DateField(null=True, blank=True, help_text="The date when the recognition was awarded")
     end_date = models.DateField(null=True, blank=True, help_text="The date when this recognition expires")
     amount = models.IntegerField(null=True, blank=True, help_text="The amount that was awarded for this recognition")
@@ -375,9 +331,6 @@ class Recognition(Base):
         # TODO: Add amount conversion logic in CAN $
         super().save(*args, **kwargs)
 
-    class Meta:
-        db_table = "recognition"
-
 
 class UserProfile(Base):
     """A summary of the person's research career, interests, experience and specialization"""
@@ -392,15 +345,12 @@ class UserProfile(Base):
     career_start_date = models.DateField(null=True, blank=True, help_text="When did you start your research career")
     engaged_in_clinical_research = models.BooleanField(default=False, help_text="if you are involved in clinical "
                                                                                 "research activities (with drugs)")
-    key_theory = models.TextField(max_length=500, null=True, blank=True, help_text="The key theories and "
+    key_theory = models.CharField(max_length=500, null=True, blank=True, help_text="The key theories and "
                                                                                    "methodologies used in research")
-    research_interest = models.TextField(max_length=1000, null=True, blank=True)
-    experience_summary = models.TextField(max_length=1000, null=True, blank=True,
+    research_interest = models.CharField(max_length=1000, null=True, blank=True)
+    experience_summary = models.CharField(max_length=1000, null=True, blank=True,
                                           help_text="summary of research experience")
     country = ArrayField(models.CharField(max_length=DEFAULT_COLUMN_LENGTH), null=True, blank=True, default=list)
-
-    class Meta:
-        db_table = "user_profile"
 
 
 class ResearchSpecializationKeyword(Base):
@@ -409,9 +359,6 @@ class ResearchSpecializationKeyword(Base):
     keyword = models.CharField(max_length=50, null=True, blank=True)
 
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
-
-    class Meta:
-        db_table = "research_specialization_keyword"
 
 
 class ResearchCentre(Base):
@@ -422,9 +369,6 @@ class ResearchCentre(Base):
     subdivision = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True)
 
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
-
-    class Meta:
-        db_table = "research_centre"
 
 
 class TechnologicalApplication(Base):
@@ -443,9 +387,6 @@ class TechnologicalApplication(Base):
     category = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, choices=CATEGORY_CHOICES, null=True, blank=True)
 
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
-
-    class Meta:
-        db_table = "technological_application"
 
 
 class DisciplineTrainedIn(Base):
@@ -479,9 +420,6 @@ class DisciplineTrainedIn(Base):
 
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
 
-    class Meta:
-        db_table = "discipline_trained_in"
-
 
 class TemporalPeriod(Base):
     """Indicate and rank the historical periods covered by your research interests, with #1 the most relevant."""
@@ -491,19 +429,16 @@ class TemporalPeriod(Base):
         ('BC', 'BC')
     )
 
-    from_year = models.IntegerField(max_length=4, null=True, blank=True,
+    from_year = models.IntegerField(null=True, blank=True,
                                     help_text="The starting year of the temporal period")
     from_year_period = models.CharField(max_length=2, null=True, blank=True, choices=YEAR_PERIOD_CHOICES,
                                         help_text="The period of the starting year")
-    to_year = models.IntegerField(max_length=4, null=True, blank=True,
+    to_year = models.IntegerField(null=True, blank=True,
                                   help_text="The end year of the temporal period")
     to_year_period = models.CharField(max_length=2, null=True, blank=True, choices=YEAR_PERIOD_CHOICES,
                                       help_text="The period of the ending year")
 
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
-
-    class Meta:
-        db_table = "temporal_period"
 
 
 class GeographicalRegion(Base):
@@ -548,16 +483,12 @@ class GeographicalRegion(Base):
 
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
 
-    class Meta:
-        db_table = "geographical_region"
-
 
 class Employment(Base):
     """Collection of information records that, in combination, represent the full and up-to-date history of the
     person's employment """
 
-    class Meta:
-        db_table = "employment"
+    pass
 
 
 class AcademicWorkExperience(Base):
@@ -589,7 +520,7 @@ class AcademicWorkExperience(Base):
 
     position_type = models.CharField(max_length=30, null=True, blank=True, choices=POSITION_TYPE_CHOICES,
                                      help_text="The nature of the person's position")
-    position_title = models.TextField(max_length=250, null=True, blank=True,
+    position_title = models.CharField(max_length=250, null=True, blank=True,
                                       help_text="The person's position at the institution")
     position_status = models.CharField(max_length=20, null=True, blank=True, choices=POSITION_STATUS_CHOICES,
                                        help_text="The status of the position with regard to tenure")
@@ -597,7 +528,7 @@ class AcademicWorkExperience(Base):
                                      help_text="The rank of the faculty member in the academic institution")
     start_date = models.DateField(null=True, blank=True, help_text="The date the person started this position")
     end_date = models.DateField(null=True, blank=True, help_text="Date the person did not occupy this position anymore")
-    work_description = models.TextField(max_length=1000, null=True, blank=True,
+    work_description = models.CharField(max_length=1000, null=True, blank=True,
                                         help_text="Description of the duties for this position")
     department = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
                                   help_text="The department within the given institution")
@@ -615,9 +546,6 @@ class AcademicWorkExperience(Base):
 
     employment = models.ForeignKey(Employment, on_delete=models.CASCADE)
 
-    class Meta:
-        db_table = "academic_work_experience"
-
 
 class NonAcademicWorkExperience(Base):
     """Employment in a non-academic environment"""
@@ -627,7 +555,7 @@ class NonAcademicWorkExperience(Base):
         ('Part-time', 'Part-time')
     )
 
-    position_title = models.TextField(max_length=250, null=True, blank=True,
+    position_title = models.CharField(max_length=250, null=True, blank=True,
                                       help_text="The position of the person with the employer")
     position_status = models.CharField(max_length=10, null=True, blank=True, choices=POSITION_STATUS_CHOICES,
                                        help_text="The nature of the person's position")
@@ -643,14 +571,11 @@ class NonAcademicWorkExperience(Base):
     other_organization = models.OneToOneField(OtherOrganization, on_delete=models.DO_NOTHING)
     employment = models.ForeignKey(Employment, on_delete=models.CASCADE)
 
-    class Meta:
-        db_table = "non_academic_work_experience"
-
 
 class Affiliation(Base):
     """Organizations with which the person is affiliated. These can be work or non-work related."""
 
-    position_title = models.TextField(max_length=250, null=True, blank=True,
+    position_title = models.CharField(max_length=250, null=True, blank=True,
                                       help_text="The name or title of the position")
     department = models.CharField(max_length=100, null=True, blank=True,
                                   help_text="The department within the given organization")
@@ -666,9 +591,6 @@ class Affiliation(Base):
     other_organization = models.OneToOneField(OtherOrganization, null=True, blank=True, on_delete=models.DO_NOTHING)
 
     employment = models.ForeignKey(Employment, on_delete=models.CASCADE)
-
-    class Meta:
-        db_table = "affiliation"
 
 
 class LeavesOfAbsence(Base):
@@ -691,15 +613,12 @@ class LeavesOfAbsence(Base):
     start_date = models.DateField(null=True, blank=True, help_text="The date the leave started")
     end_date = models.DateField(null=True, blank=True, help_text="The date the leave ended, if applicable")
 
-    absence_description = models.TextField(max_length=1000, null=True, blank=True,
+    absence_description = models.CharField(max_length=1000, null=True, blank=True,
                                            help_text="description of the leave of absence")
 
     organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.CASCADE)
     other_organization = models.OneToOneField(OtherOrganization, null=True, blank=True, on_delete=models.CASCADE)
     employment = models.ForeignKey(Employment, on_delete=models.CASCADE)
-
-    class Meta:
-        db_table = "leaves_of_absence"
 
 
 class ResearchFundingHistory(Base):
@@ -750,10 +669,10 @@ class ResearchFundingHistory(Base):
                                   help_text="The date when the funding for this project started.")
     end_date = models.DateField(null=True, blank=True, help_text="The date when the funding for this project ended.")
 
-    funding_title = models.TextField(max_length=250, null=True, blank=True,
+    funding_title = models.CharField(max_length=250, null=True, blank=True,
                                      help_text="The nature of the grant received")
     grant_type = models.CharField(max_length=20, choices=GRANT_TYPE_CHOICES, null=True, blank=True)
-    project_description = models.TextField(
+    project_description = models.CharField(
         max_length=1000, null=True, blank=True, help_text="description of project for which funding was received")
     clinical_research_project = models.CharField(max_length=5, null=True, blank=True, choices=PROJECT_CHOICES)
 
@@ -763,11 +682,8 @@ class ResearchFundingHistory(Base):
 
     funding_role = models.CharField(max_length=30, choices=FUNDING_ROLE_CHOICES, blank=True, null=True,
                                     help_text="Person's role in this research, as defined by the funding organization")
-    research_uptake = models.TextField(max_length=1000, null=True, blank=True,
+    research_uptake = models.CharField(max_length=1000, null=True, blank=True,
                                        help_text="strategies used to promote the uptake of your research findings.")
-
-    class Meta:
-        db_table = "research_funding_history"
 
 
 class ResearchUptakeHolder(Base):
@@ -796,9 +712,6 @@ class ResearchUptakeHolder(Base):
 
     research_funding_history = models.ForeignKey(ResearchFundingHistory, on_delete=models.CASCADE)
 
-    class Meta:
-        db_table = "research_uptake_holder"
-
 
 class ResearchSetting(Base):
     """The locations where the research was done. For example a canadian funded project might be composed of several
@@ -815,9 +728,6 @@ class ResearchSetting(Base):
     setting_type = models.CharField(max_length=10, null=True, blank=True,
                                     help_text="The type of environment where the research was conducted")
     research_funding_history = models.ForeignKey(ResearchFundingHistory, on_delete=models.CASCADE)
-
-    class Meta:
-        db_table = "research_setting"
 
 
 class FundingSource(Base):
@@ -866,9 +776,6 @@ class FundingSource(Base):
         # TODO: Add amount conversion logic in CAN $
         super().save(*args, **kwargs)
 
-    class Meta:
-        db_table = "funding_source"
-
 
 class FundingByYear(Base):
     """Breakdown of the total funding received from one or more organizations for this project, by year."""
@@ -902,9 +809,6 @@ class FundingByYear(Base):
         # TODO: Add amount conversion logic in CAN $
         super().save(*args, **kwargs)
 
-    class Meta:
-        db_table = "funding_by_year"
-
 
 class OtherInvestigator(Base):
     """The names and roles of other investigators who have participated in this research project"""
@@ -928,16 +832,12 @@ class OtherInvestigator(Base):
 
     research_funding_history = models.ForeignKey(ResearchFundingHistory, on_delete=models.CASCADE)
 
-    class Meta:
-        db_table = "other_investigator"
-
 
 class Membership(Base):
     """Services contributed as part of a group elected or appointed to perform such services but not directly related
     to the person's research activities. """
 
-    class Meta:
-        db_table = "membership"
+    pass
 
 
 class CommitteeMembership(Base):
@@ -951,9 +851,9 @@ class CommitteeMembership(Base):
 
     role = models.CharField(max_length=20, null=True, blank=True, choices=ROLE_CHOICES,
                             help_text="The person's role in this activity")
-    name = models.TextField(max_length=250, null=True, blank=True, help_text="The name of the committee")
+    name = models.CharField(max_length=250, null=True, blank=True, help_text="The name of the committee")
     start_date = models.DateField(null=True, blank=True, help_text="The date on which membership began")
-    description = models.TextField(max_length=1000, null=True, blank=True,
+    description = models.CharField(max_length=1000, null=True, blank=True,
                                    help_text="Description of services contributed by the person as part of a committee")
     end_date = models.DateField(null=True, blank=True, help_text="The date on which membership ended, if applicable")
 
@@ -971,9 +871,9 @@ class OtherMembership(Base):
     related to the person's research activities """
 
     role = models.CharField(max_length=20, null=True, blank=True, help_text="The person's role in this activity")
-    name = models.TextField(max_length=250, null=True, blank=True, help_text="The name of the committee")
+    name = models.CharField(max_length=250, null=True, blank=True, help_text="The name of the committee")
     start_date = models.DateField(null=True, blank=True, help_text="The date on which membership began")
-    description = models.TextField(max_length=1000, null=True, blank=True,
+    description = models.CharField(max_length=1000, null=True, blank=True,
                                    help_text="Description of services contributed by the person as part of a committee")
     end_date = models.DateField(null=True, blank=True, help_text="The date on which membership ended, if applicable")
 
@@ -982,15 +882,11 @@ class OtherMembership(Base):
     other_organization = models.OneToOneField(OtherOrganization, null=True, blank=True, on_delete=models.DO_NOTHING)
     membership = models.ForeignKey(Membership, on_delete=models.DO_NOTHING)
 
-    class Meta:
-        db_table = "other_membership"
-
 
 class Activity(Base):
     """Services that the person contributed to"""
 
-    class Meta:
-        db_table = "activity"
+    pass
 
 
 class ResearchDiscipline(Base):
@@ -1009,9 +905,6 @@ class ResearchDiscipline(Base):
     academic_work_experience = models.ForeignKey(AcademicWorkExperience, on_delete=models.CASCADE)
     non_academic_work_experience = models.ForeignKey(NonAcademicWorkExperience, on_delete=models.CASCADE)
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
-
-    class Meta:
-        db_table = "research_discipline"
 
 
 class AreaOfResearch(Base):
@@ -1032,9 +925,6 @@ class AreaOfResearch(Base):
     non_academic_work_experience = models.ForeignKey(NonAcademicWorkExperience, on_delete=models.CASCADE)
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
 
-    class Meta:
-        db_table = "area_of_research"
-
 
 class FieldOfApplication(Base):
     """The field of application is the scientific, social, economic, cultural, or political area where the research
@@ -1050,6 +940,3 @@ class FieldOfApplication(Base):
     academic_work_experience = models.ForeignKey(AcademicWorkExperience, on_delete=models.CASCADE)
     non_academic_work_experience = models.ForeignKey(NonAcademicWorkExperience, on_delete=models.CASCADE)
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
-
-    class Meta:
-        db_table = "field_of_application"
