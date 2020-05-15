@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import uuid
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 from djangoyearlessdate.models import YearlessDateField
@@ -34,6 +35,16 @@ class OtherOrganization(Base):
                             help_text="The type of organization, only if Other Organization is entered")
     name = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
                             help_text="The organization's name, only if not in Organization list")
+
+
+class CanadianCommonCv(Base):
+    """Master table which links all entities like Identification, Education, Employment, Contribution, etc."""
+
+    _id = models.CharField(max_length=40, db_index=True, unique=True)
+
+    def save(self, *args, **kwargs):
+        self._id = uuid.uuid4().__str__()
+        super().save(*args, **kwargs)
 
 
 class Identification(Base):
@@ -93,6 +104,8 @@ class Identification(Base):
     permanent_residency = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, choices=PERMANENT_RESIDENCY_CHOICES,
                                            null=True, blank=True)
     permanent_residency_start_date = models.DateField(null=True, blank=True)
+
+    ccv = models.OneToOneField(CanadianCommonCv, on_delete=models.CASCADE)
 
 
 class CountryOfCitizenship(Base):
@@ -224,7 +237,7 @@ class Education(Base):
     """Collection of information records that, in combination, represent the full and up-to-date history of the
     person's education """
 
-    pass
+    ccv = models.OneToOneField(CanadianCommonCv, on_delete=models.CASCADE)
 
 
 class Degree(Base):
@@ -271,7 +284,7 @@ class Degree(Base):
 
     organization = models.OneToOneField(Organization, on_delete=models.CASCADE, null=True, blank=True,
                                         help_text="The institution that conferred the degree.")
-    other_organization = models.OneToOneField(OtherOrganization, on_delete=models.CASCADE, null=True, blank=True,)
+    other_organization = models.OneToOneField(OtherOrganization, on_delete=models.CASCADE, null=True, blank=True, )
 
     education = models.ForeignKey(Education, on_delete=models.DO_NOTHING)
 
@@ -325,7 +338,8 @@ class Recognition(Base):
 
     organization = models.OneToOneField(Organization, on_delete=models.CASCADE, null=True, blank=True,
                                         help_text="The organization that gave the recognition")
-    other_organization = models.OneToOneField(OtherOrganization, on_delete=models.CASCADE, null=True, blank=True,)
+    other_organization = models.OneToOneField(OtherOrganization, on_delete=models.CASCADE, null=True, blank=True)
+    ccv = models.OneToOneField(CanadianCommonCv, on_delete=models.CASCADE)
 
     def save(self, *args, **kwargs):
         # TODO: Add amount conversion logic in CAN $
@@ -351,6 +365,8 @@ class UserProfile(Base):
     experience_summary = models.CharField(max_length=1000, null=True, blank=True,
                                           help_text="summary of research experience")
     country = ArrayField(models.CharField(max_length=DEFAULT_COLUMN_LENGTH), null=True, blank=True, default=list)
+
+    ccv = models.OneToOneField(CanadianCommonCv, on_delete=models.CASCADE)
 
 
 class ResearchSpecializationKeyword(Base):
@@ -488,7 +504,7 @@ class Employment(Base):
     """Collection of information records that, in combination, represent the full and up-to-date history of the
     person's employment """
 
-    pass
+    ccv = models.OneToOneField(CanadianCommonCv, on_delete=models.CASCADE)
 
 
 class AcademicWorkExperience(Base):
@@ -542,7 +558,7 @@ class AcademicWorkExperience(Base):
                                                                         "if applicable")
 
     organization = models.OneToOneField(Organization, on_delete=models.CASCADE, null=True, blank=True)
-    other_organization = models.OneToOneField(OtherOrganization, on_delete=models.CASCADE, null=True, blank=True,)
+    other_organization = models.OneToOneField(OtherOrganization, on_delete=models.CASCADE, null=True, blank=True, )
 
     employment = models.ForeignKey(Employment, on_delete=models.CASCADE)
 
@@ -684,6 +700,8 @@ class ResearchFundingHistory(Base):
                                     help_text="Person's role in this research, as defined by the funding organization")
     research_uptake = models.CharField(max_length=1000, null=True, blank=True,
                                        help_text="strategies used to promote the uptake of your research findings.")
+
+    ccv = models.OneToOneField(CanadianCommonCv, on_delete=models.CASCADE)
 
 
 class ResearchUptakeHolder(Base):
@@ -837,7 +855,7 @@ class Membership(Base):
     """Services contributed as part of a group elected or appointed to perform such services but not directly related
     to the person's research activities. """
 
-    pass
+    ccv = models.OneToOneField(CanadianCommonCv, on_delete=models.CASCADE)
 
 
 class CommitteeMembership(Base):
@@ -862,9 +880,6 @@ class CommitteeMembership(Base):
     other_organization = models.OneToOneField(OtherOrganization, null=True, blank=True, on_delete=models.DO_NOTHING)
     membership = models.ForeignKey(Membership, on_delete=models.DO_NOTHING)
 
-    class Meta:
-        db_table = "committee_membership"
-
 
 class OtherMembership(Base):
     """Services contributed as part of a scholarly society or other organization to perform services not directly
@@ -886,7 +901,1107 @@ class OtherMembership(Base):
 class Activity(Base):
     """Services that the person contributed to"""
 
-    pass
+    ccv = models.OneToOneField(CanadianCommonCv, on_delete=models.CASCADE)
+
+
+class ActivityAbstract(Base):
+    """"""
+
+    start_date = models.DateField(null=True, blank=True, help_text="The date the person began this activity.")
+    end_date = models.DateField(null=True, blank=True, help_text="The date the person finished this activity.")
+
+    class Meta:
+        abstract = True
+
+
+class TeachingActivity(Base):
+    """Services contributed in the form of teaching activities at academic institutions with which the person is
+    currently, or has in the past been, affiliated. """
+
+    activity = models.OneToOneField(Activity, on_delete=models.CASCADE)
+
+
+
+class CourseTaught(Base):
+    """Services contributed in the form of courses taught at academic institutions with which the person is
+    currently, or has in the past been, affiliated. """
+
+    ACADEMIC_SESSION_CHOICES = (
+        ('Fall', 'Fall'),
+        ('Spring', 'Spring'),
+        ('Summer', 'Summer'),
+        ('Winter', 'Winter')
+    )
+    LEVEL_CHOICES = (
+        ('College', 'College'),
+        ('Graduate', 'Graduate'),
+        ('Post Graduate', 'Post Graduate'),
+        ('Undergraduate', 'Undergraduate')
+    )
+    BOOLEAN_CHOICES = (
+        ('Yes', 'Yes'),
+        ('No', 'No')
+    )
+
+    role = models.CharField(max_length=100, null=True, blank=True,
+                            help_text="The role of the person in this activity")
+    department = models.CharField(max_length=100, null=True, blank=True,
+                                  help_text="The department within the given institution")
+    academic_session = models.CharField(max_length=20, null=True, blank=True, choices=ACADEMIC_SESSION_CHOICES,
+                                        help_text="The academic session in which this course was taught")
+    code = models.CharField(max_length=25, null=True, blank=True, help_text="The institution's course code")
+    title = models.TextField(max_length=250, null=True, blank=True, help_text="The course title")
+    topic = models.CharField(max_length=100, null=True, blank=True, help_text="The topic of the course")
+    level = models.CharField(max_length=20, null=True, blank=True, choices=LEVEL_CHOICES)
+    section = models.TextField(max_length=250, null=True, blank=True,
+                               help_text="The area of study in which the course falls.")
+    students_count = models.IntegerField(null=True, blank=True,
+                                         help_text="The number of students who attend this course during a session")
+    credits_count = models.IntegerField(null=True, blank=True, help_text="Institution’s credit value for the course")
+    start_date = models.DateField(null=True, blank=True, help_text="The date the person began teaching this course.")
+    end_date = models.DateField(null=True, blank=True, help_text="The date the person finished teaching this course.")
+    lecture_hours_per_week = models.IntegerField(null=True, blank=True, help_text="The number of hours of lecture the "
+                                                                                  "person contributed per week")
+    tutorial_hours_per_week = models.IntegerField(null=True, blank=True, help_text="The number of hours of tutorial "
+                                                                                   "the person contributed per week.")
+    lab_hours_per_week = models.IntegerField(null=True, blank=True,
+                                             help_text="The number of hours of laboratory instruction the person "
+                                                       "contributed per week.")
+    guest_lecture = models.CharField(max_length=5, null=True, blank=True, choices=BOOLEAN_CHOICES,
+                                     help_text="Indicate whether you were a guest lecturer for this course")
+
+    organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.DO_NOTHING,
+                                        help_text="The organization where the course was taught ")
+    other_organization = models.OneToOneField(OtherOrganization, null=True, blank=True, on_delete=models.DO_NOTHING)
+    teaching_activity = models.ForeignKey(TeachingActivity, on_delete=models.CASCADE)
+
+
+
+class CoInstructor(Base):
+    """The names of the instructors who assisted in teaching the course"""
+
+    family_name = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                   help_text="The family name of the instructor")
+    first_name = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                  help_text="The first name of the instructor")
+
+    course_taught = models.ForeignKey(CourseTaught, on_delete=models.DO_NOTHING)
+
+
+
+class CourseDevelopment(Base):
+    """Contributions in the development of courses/modules for training or teaching purposes."""
+
+    teaching_activity = models.ForeignKey(TeachingActivity, on_delete=models.CASCADE)
+
+
+class ProgramDevelopment(Base):
+    """"""
+
+
+
+class CoDeveloper(Base):
+    """The names of persons who participated in the development of the course"""
+
+    family_name = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                   help_text="Family name of person who participated in the development of the course")
+    first_name = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                  help_text="First name of person who participated in the development of the course")
+
+    course_development = models.ForeignKey(CourseDevelopment, on_delete=models.DO_NOTHING, null=True, blank=True)
+
+    # program_development = models.ForeignKey(CourseDevelopment, on_delete=models.DO_NOTHING, null=True, blank=True)
+
+
+
+
+class SupervisoryActivity(Base):
+    """"""
+
+
+
+
+class StudentSupervision(Base):
+    """"""
+
+
+
+class AdministrativeActivity(Base):
+    """"""
+
+
+
+class AdvisoryActivity(Base):
+    """"""
+
+
+
+
+class AssessmentAndReviewActivity(Base):
+    """Services contributed to examine something, formulate a judgement, and provide a statement of that judgement."""
+
+    activity = models.OneToOneField(Activity, on_delete=models.CASCADE)
+
+
+class JournalReviewActivity(ActivityAbstract):
+    """Services contributed to examine a journal, formulate a judgement, and a statement of that judgement"""
+
+    REVIEW_TYPE_CHOICES = (
+        ('Blind', 'Blind'),
+        ('Double Blind', 'Double Blind'),
+        ('Open', 'Open')
+    )
+
+    role = models.CharField(max_length=100, null=True, blank=True, help_text="The person's role in this activity")
+    review_type = models.CharField(max_length=20, null=True, blank=True, choices=REVIEW_TYPE_CHOICES,
+                                   help_text="The nature of the review conducted")
+    journal = models.CharField(max_length=200, null=True, blank=True, help_text="The name of the journal")
+    press = models.CharField(max_length=250, null=True, blank=True, help_text="The name of the press")
+    works_reviewed_count = models.IntegerField(null=True, blank=True, default=0,
+                                               help_text="Indicate how many works were reviewed")
+
+    assessment_review_activity = models.ForeignKey(AssessmentAndReviewActivity, on_delete=models.CASCADE)
+
+
+class ConferenceReviewActivity(ActivityAbstract):
+    """Services contributed, in conjunction with a scheduled conference, to examine something, formulate a judgement,
+        and a statement of that judgement """
+
+    REVIEW_TYPE_CHOICES = (
+        ('Blind', 'Blind'),
+        ('Double Blind', 'Double Blind'),
+        ('Open', 'Open')
+    )
+
+    role = models.CharField(max_length=100, null=True, blank=True, help_text="The person's role in this activity")
+    review_type = models.CharField(max_length=20, null=True, blank=True, choices=REVIEW_TYPE_CHOICES,
+                                   help_text="The nature of the review conducted")
+    conference = models.CharField(max_length=250, null=True, blank=True, help_text="The name of the conference")
+    conference_host = models.CharField(max_length=250, null=True, blank=True, help_text="The organization hosting the "
+                                                                                        "conference")
+    works_referred_count = models.IntegerField(null=True, blank=True, default=0,
+                                               help_text="Indicate how many works were reviewed")
+
+    assessment_review_activity = models.ForeignKey(AssessmentAndReviewActivity, on_delete=models.CASCADE)
+
+
+class GraduationExaminationActivity(ActivityAbstract):
+    """Services contributed, in conjunction with the awarding of a graduate degree, to examine the proposal,
+    formulate a judgement, and a statement of that judgement """
+
+    ROLE_CHOICES = (
+        ('Candidacy Committee Chair', 'Candidacy Committee Chair'),
+        ('Candidacy Committee Member', 'Candidacy Committee Member'),
+        ('Capping Project Evaluator', 'Capping Project Evaluator'),
+        ('Chair', 'Chair'),
+        ('Committee Member', 'Committee Member'),
+        ('Examiner', 'Examiner'),
+        ("Master's Oral Exam Chair", "Master's Oral Exam Chair"),
+        ("Master's Oral Exam Member", "Master's Oral Exam Member"),
+        ("Master's Proposal Defense Chair", "Master's Proposal Defense Chair"),
+        ("Master's Proposal Defense Member", "Master's Proposal Defense Member"),
+        ('PhD Comprehensive Exam Committee Member', 'PhD Comprehensive Exam Committee Member'),
+        ('PhD External Examiner', 'PhD External Examiner'),
+        ('PhD External Reader', 'PhD External Reader'),
+        ('PhD Oral Exam Chair', 'PhD Oral Exam Chair'),
+        ('PhD Oral Exam Member', 'PhD Oral Exam Member'),
+        ('Thesis Defense Chair', 'Thesis Defense Chair'),
+        ('Thesis Defense Examiner', 'Thesis Defense Examiner')
+    )
+
+    role = models.CharField(max_length=50, null=True, blank=True, choices=ROLE_CHOICES,
+                            help_text="The person's role in this activity")
+    department = models.CharField(max_length=100, null=True, blank=True,
+                                  help_text="The department within the given institution")
+    student_name = models.CharField(max_length=100, null=True, blank=True,
+                                    help_text="The family and first name of the student")
+    organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.DO_NOTHING,
+                                        help_text="The institution for which the examination was conducted.")
+    other_organization = models.OneToOneField(OtherOrganization, null=True, blank=True, on_delete=models.DO_NOTHING)
+
+    assessment_review_activity = models.ForeignKey(AssessmentAndReviewActivity, on_delete=models.CASCADE)
+
+
+class ResearchFundingApplicationAssessmentActivity(ActivityAbstract):
+    """Services contributed, in conjunction with the assessment of a research funding application, to examine the
+    application, formulate a judgement, and a statement of that judgement. """
+
+    REVIEWER_ROLE_CHOICES = (
+        ('Chair', 'Chair'),
+        ('Committee Member', 'Committee Member'),
+        ('External Reviewer', 'External Reviewer'),
+        ('Scientific Officer', 'Scientific Officer')
+    )
+    ASSESSMENT_TYPE_CHOICES = (
+        ('Funder', 'Funder'),
+        ('Organization', 'Organization')
+    )
+    REVIEWER_TYPE_CHOICES = (
+        ('Academic Reviewer', 'Academic Reviewer'),
+        ('Industry', 'Industry'),
+        ('Knowledge User', 'Knowledge User'),
+        ('Non-academic Reviewer', 'Non-academic Reviewer')
+    )
+
+    funding_reviewer_role = models.CharField(max_length=20, null=True, blank=True, choices=REVIEWER_ROLE_CHOICES,
+                                             help_text="The person's role in this activity")
+    assessment_type = models.CharField(max_length=20, null=True, blank=True, choices=ASSESSMENT_TYPE_CHOICES,
+                                       help_text="The nature of the assessment. Indicate whether the assessment was "
+                                                 "done for a Funding Organization (Funder) or another organization ("
+                                                 "Institution)")
+    reviewer_type = models.CharField(max_length=30, null=True, blank=True, choices=REVIEWER_TYPE_CHOICES,
+                                     help_text="The nature of the reviewer")
+    committee_name = models.CharField(max_length=250, null=True, blank=True,
+                                      help_text="The committee name for the funding assessment")
+    funding_organization = models.CharField(max_length=NAME_LENGTH_MAX, null=True, blank=True,
+                                            help_text="The name of the organization which provided the grant or "
+                                                      "scholarship")
+    applications_assessed_count = models.IntegerField(null=True, blank=True,
+                                                      help_text="The number of applications that the person assessed")
+    organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.DO_NOTHING,
+                                        help_text="The organization for which the assessment was made")
+    other_organization = models.OneToOneField(OtherOrganization, null=True, blank=True, on_delete=models.DO_NOTHING)
+
+    assessment_review_activity = models.ForeignKey(AssessmentAndReviewActivity, on_delete=models.CASCADE)
+
+
+class PromotionTenureAssessmentActivity(ActivityAbstract):
+    """Services contributed, in conjunction with the consideration of an application for promotion/tenure,
+    to examine something, formulate a judgement, and a statement of that judgement. """
+
+    role = models.CharField(max_length=NAME_LENGTH_MAX, null=True, blank=True,
+                            help_text="The person's role in this activity")
+    department = models.CharField(max_length=NAME_LENGTH_MAX, null=True, blank=True,
+                                  help_text="The department within the given organization")
+    assessments_count = models.IntegerField(null=True, blank=True,
+                                            help_text="The number of applications which were assessed by "
+                                                      "the person")
+    description = models.CharField(max_length=1000, null=True, blank=True,
+                                   help_text="Description of the services contributed by the person, in conjunction "
+                                             "with the consideration of an application for promotion/tenure, "
+                                             "to examine something, formulate a judgement, and a statement of that "
+                                             "judgement.")
+    organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.DO_NOTHING,
+                                        help_text="The organization for which the assessment was made")
+    other_organization = models.OneToOneField(OtherOrganization, null=True, blank=True, on_delete=models.DO_NOTHING)
+
+    assessment_review_activity = models.ForeignKey(AssessmentAndReviewActivity, on_delete=models.CASCADE)
+
+
+class OrganizationalReviewActivity(ActivityAbstract):
+    """Services contributed, in conjunction with the assessment of an institution, to examine something, formulate a
+    judgement, and a statement of that judgement. """
+
+    role = models.CharField(max_length=NAME_LENGTH_MAX, null=True, blank=True,
+                            help_text="The person's role in this activity")
+    description = models.CharField(max_length=1000, null=True, blank=True,
+                                   help_text="Description of the services contributed by the person, in conjunction "
+                                             "with the consideration of an application for promotion/tenure, "
+                                             "to examine something, formulate a judgement, and a statement of that "
+                                             "judgement.")
+    organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.DO_NOTHING,
+                                        help_text="The organization for which the assessment was made")
+    other_organization = models.OneToOneField(OtherOrganization, null=True, blank=True, on_delete=models.DO_NOTHING)
+
+    assessment_review_activity = models.ForeignKey(AssessmentAndReviewActivity, on_delete=models.CASCADE)
+
+
+class ParticipationActivity(Base):
+    """Services contributed in participating in an activity"""
+
+    activity = models.OneToOneField(Activity, on_delete=models.DO_NOTHING)
+
+
+class EventActivity(Base):
+    """Services contributed in taking part in an event"""
+
+    TYPE_CHOICES = (
+        ('Association', 'Association'),
+        ('Club', 'Club'),
+        ('Conference', 'Conference'),
+        ('Course', 'Course'),
+        ('Seminar', 'Seminar'),
+        ('Workshop', 'Workshop')
+    )
+
+    role = models.CharField(max_length=100, null=True, blank=True, help_text="The role of the person in this activity")
+    type = models.CharField(max_length=20, null=True, blank=True, choices=TYPE_CHOICES,
+                            help_text="The nature of the event")
+    name = models.CharField(max_length=250, null=True, blank=True, help_text="The title or name of the event")
+    start_date = models.DateField(null=True, blank=True, help_text="The date the person started the activity")
+    end_date = models.DateField(null=True, blank=True, help_text="The date the person completed this activity")
+    event_start_date = models.DateField(null=True, blank=True, help_text="The date the event started")
+    event_end_date = models.DateField(null=True, blank=True, help_text="The date the event ended")
+    description = models.CharField(max_length=1000, null=True, blank=True,
+                                   help_text="Description of the services the person contributed in taking part in an "
+                                             "event")
+
+    participation_activity = models.ForeignKey(ParticipationActivity, on_delete=models.CASCADE)
+
+
+class CommunityAndVolunteerActivity(ActivityAbstract):
+    """Services contributed, unpaid, on behalf of one’s locality, social, religious, occupational, or other group
+    sharing common characteristics or interests, but not directly related to the person's research activities """
+
+    role = models.CharField(max_length=100, null=True, blank=True, help_text="The role of the person in this activity")
+    description = models.CharField(max_length=1000, null=True, blank=True, help_text="Description of the unpaid services")
+
+    organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.DO_NOTHING,
+                                        help_text="The name of the organization for which the service was undertaken")
+    other_organization = models.OneToOneField(OtherOrganization, null=True, blank=True, on_delete=models.DO_NOTHING)
+    participation_activity = models.ForeignKey(ParticipationActivity, on_delete=models.CASCADE)
+
+
+class KnowledgeTranslation(ActivityAbstract):
+    """Contribution to knowledge and technology translation"""
+
+    role = models.CharField(max_length=100, null=True, blank=True, help_text="The person's role in this activity")
+    knowledge_translation_activity_type = models.CharField(max_length=50, null=True, blank=True,
+                                                           help_text="")
+    group_or_organization_serviced = models.CharField(max_length=100, null=True, blank=True,
+                                                      help_text="")
+    # evidence_of_uptake = models.CharField(max_length=1000, ?he)
+    reference_or_citation = models.CharField(max_length=1000, null=True, blank=True,
+                                             help_text="Provide references, citations or websites demonstrating the uptake of your research findings")
+    activity_description = models.CharField(max_length=1000, null=True, blank=True,
+                                            help_text="Description of services the person contributed to knowledge translation")
+
+
+class InternationalCollaborationActivity(ActivityAbstract):
+    """International Collaborations can be described as situations where the applicant worked with others outside of
+    Canada on administrative, professional, research, or knowledge translation projects. These activities should be
+    relevant to the application the researcher is submitting with this CV"""
+
+    role = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                            help_text="The role of the person in this activity")
+    location = models.CharField(max_length=30, null=True, blank=True,
+                                help_text="The principal country with which the person collaborated")  # c
+    description = models.TextField(max_length=1000, null=True, blank=True)
+
+    activity = models.ForeignKey(Activity, on_delete=models.CASCADE)
+
+
+class Contribution(Base):
+    """The things you have done as part of your career"""
+
+    ccv = models.OneToOneField(CanadianCommonCv, on_delete=models.CASCADE)
+
+
+class Presentation(Base):
+    """Contributions of presentations to groups of people not delivered as part of a formal course of study"""
+
+    MAIN_AUDIENCE_CHOICES = (
+        ('Decision Maker', 'Decision Maker'),
+        ('General Public', 'General Public'),
+        ('Knowledge User', 'Knowledge User'),
+        ('Researcher', 'Researcher')
+    )
+
+    title = models.CharField(max_length=250, null=True, blank=True, help_text="The title of the presentation")
+    event_name = models.CharField(max_length=250, null=True, blank=True,
+                                  help_text="The name of the event in which the person gave the presentation")
+    location = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                help_text="The country where the conference took place")  #
+    city = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                            help_text="The city where the conference took place")
+    main_audience = models.CharField(max_length=20, null=True, blank=True, choices=MAIN_AUDIENCE_CHOICES,
+                                     help_text="The nature of the audience")
+    is_invited = models.BooleanField(null=True, blank=True,
+                                     help_text="Indicate whether the person was invited to present this information")
+    is_keynote = models.BooleanField(null=True, blank=True,
+                                     help_text="Indicate whether the person gave the keynote address at this event")
+    is_competitive = models.BooleanField(null=True, blank=True,
+                                         help_text="Indicate if participation in this event was competitive")
+    presentation_year = models.CharField(max_length=4, null=True, blank=True,
+                                         help_text="The year the presentation was given")
+    description = models.CharField(max_length=1000, null=True, blank=True,
+                                   help_text="Provide a concise description of this contribution and its value to the area of research for which you are applying for funding")
+    url = models.URLField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                          help_text="The name of an associated website, if applicable")
+    co_presenters = models.CharField(max_length=200, null=True, blank=True,
+                                     help_text="The names of other persons presenting this topic, if applicable")
+
+    contribution = models.ForeignKey(Contribution, on_delete=models.CASCADE)
+
+
+class InterviewAndMediumRelation(Base):
+    """Services contributed in the form of interview(s) with the person with a member of the broadcast (TV or radio)
+    media. """
+
+    topic = models.CharField(max_length=250, null=True, blank=True, help_text="The subject of the interview")
+    interviewer = models.CharField(max_length=100, null=True, blank=True, help_text="The interviewers' names")
+    description = models.CharField(max_length=1000, null=True, blank=True,
+                                   help_text="description of this contribution and its value to the area of research")
+    url = models.URLField(max_length=100, null=True, blank=True,
+                          help_text="The name of an associated website, if applicable")
+
+    class Meta:
+        abstract = True
+
+
+class BroadcastInterview(InterviewAndMediumRelation):
+    """Services contributed in the form of interview(s) with the person with a member of the broadcast (TV or radio)
+    media. """
+
+    program = models.CharField(max_length=250, null=True, blank=True, help_text="")
+    network = models.CharField(max_length=250, null=True, blank=True, help_text="")
+    first_broadcast_date = models.DateField(null=True, blank=True, help_text="The date on which the interview was first aired")
+    end_date = models.DateField(null=True, blank=True, help_text="The date on which the broadcast of the interview ended")
+
+    contribution = models.ForeignKey(Contribution, on_delete=models.CASCADE)
+
+
+class TextInterview(InterviewAndMediumRelation):
+    """Services contributed in the form of interview(s) with the person with a member of the print or online media"""
+
+    forum = models.CharField(max_length=250, null=True, blank=True, help_text="The name of the forum for which the interview was conducted")
+    publication_date = models.DateField(null=True, blank=True, help_text="The date on which the interview was first published")
+
+    contribution = models.ForeignKey(Contribution, on_delete=models.CASCADE)
+
+
+class Publication(Base):
+    """Collection of information records that, in combination, represent a full and up-to-date history of research or
+    scholarly published outputs resulting from, or related to, the person's research activities """
+
+    contribution = models.OneToOneField(Contribution, on_delete=models.CASCADE)
+
+
+class PublicationAbstract(Base):
+    """"""
+
+    CONTRIBUTION_PERCENTAGE_CHOICES = (
+        ('0-10', '0-10'),
+        ('11-20', '11-20'),
+        ('21-30', '21-30'),
+        ('31-40', '31-40'),
+        ('41-50', '41-50'),
+        ('51-60', '51-60'),
+        ('61-70', '61-70'),
+        ('71-80', '71-80'),
+        ('81-90', '81-90'),
+        ('91-100', '91-100')
+    )
+    ROLE_CHOICES = (
+        ('Co-Author', 'Co-Author'),
+        ('Co-Editor', 'Co-Editor'),
+        ('First Listed Author', 'First Listed Author'),
+        ('First Listed Editor', 'First Listed Editor'),
+        ('Last Author', 'Last Author')
+    )
+
+    title = models.CharField(max_length=250, null=True, blank=True)
+    contribution_value = models.CharField(max_length=1000, null=True, blank=True, help_text="")
+    url = models.URLField(max_length=500, null=True, blank=True, help_text="")
+    role = models.CharField(max_length=30, null=True, blank=True, choices=ROLE_CHOICES, help_text="The nature of the person's role")
+    contributors_count = models.IntegerField(null=True, blank=True, help_text="The number of contributors")
+    contribution_percentage = models.CharField(max_length=10, null=True, blank=True,
+                                               choices=CONTRIBUTION_PERCENTAGE_CHOICES,
+                                               help_text="approximate percentage (%) of work you contributed towards "
+                                                         "this publication")
+    doi = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                           help_text="digital object identifier (DOI) for this publication")
+    description_of_role = models.CharField(max_length=1000, null=True, blank=True,
+                                           help_text="brief description of your contribution role towards this publication")
+
+    class Meta:
+        abstract = True
+
+
+class AuthorEditor(models.Model):
+    """Contains author & editor fields to be inherited wherever necessary"""
+
+    authors = models.CharField(max_length=1000, null=True, blank=True,
+                               help_text="The names of other authors")
+    editors = models.CharField(max_length=200, null=True, blank=True, help_text="The names of the editors")
+
+    class Meta:
+        abstract = True
+
+
+class PublicationStaticAbstract(PublicationAbstract, AuthorEditor):
+
+
+
+
+class JournalArticle(Base):
+    """Articles in peer-reviewed publications that disseminate the results of original research and scholarship"""
+
+    STATUS_CHOICES = (
+        ('Accepted', 'Accepted'),
+        ('In Press', 'In Press'),
+        ('Published', 'Published'),
+        ('Revision Requested', 'Revision Requested'),
+        ('Submitted', 'Submitted')
+    )
+
+
+
+    title = models.CharField(max_length=250, null=True, blank=True, help_text="The title of the article")
+    journal = models.CharField(max_length=200, null=True, blank=True,
+                               help_text="The name of the journal in which the article is published, or to be published")
+    volume = models.CharField(max_length=20, null=True, blank=True, help_text="The volume number of the journal")
+    issue = models.CharField(max_length=10, null=True, blank=True, help_text="The volume number of the journal")
+    page_range = models.CharField(max_length=20, null=True, blank=True,
+                                  help_text="The page range with a dash ('-') as separator (e.g. 234-256)")
+    publishing_status = models.CharField(max_length=30, choices=STATUS_CHOICES, null=True, blank=True,
+                                         help_text="The status of the article with regard to publication")
+
+
+class JournalIssue(PublicationAbstract):
+    """"""
+
+    journal = models.CharField(max_length=200, null=True, blank=True, help_text="The title of the journal")
+
+
+class Book(PublicationAbstract):
+    """Books written by a single author or collaboratively based on research or scholarly findings generally derived from peer reviewed funding"""
+
+
+class BookChapter(PublicationAbstract):
+    """"""
+
+
+class BookReview(PublicationAbstract):
+    """"""
+
+
+class Translation(PublicationAbstract):
+    """Translations of books and articles that identify modifications to the original edition, such as a new or revised preface."""
+
+
+# class ThesisDissertation:
+#
+# class SupervisedStudentPublication:
+#
+# class Litigation:
+# class NewspaperArticle:
+class EncyclopediaEntry:
+    """Authored entries in a reference work or a compendium focusing on a particular domain or on all branches of knowledge."""
+
+class MagazineEntry(PublicationAbstract, AuthorEditor):
+    """Articles in thematic publications published at fixed intervals"""
+    # FIXME: Needs review
+
+class DictionaryEntry(PublicationAbstract, AuthorEditor):
+    """Entries of new words, new meanings of existing words, changes in spelling and hyphenation over a longer period
+    of time, and grammatical changes. """
+
+    name = models.CharField(max_length=250, null=True, blank=True, help_text="")
+    edition = models.CharField(max_length=50, null=True, blank=True, help_text="The edition in which it was published")
+    volume = models.CharField(max_length=20, null=True, blank=True, help_text="The volume in which it was published")
+    volumes_count = models.IntegerField(null=True, blank=True,
+                                        help_text="The total number of volumes contained in the dictionary")
+    page_range = models.IntegerField(null=True, blank=True,
+                                     help_text="The page range with a dash ('-') as separator (e.g. 234-256)")
+    year = models.CharField(max_length=4, null=True, blank=True, help_text="The year relative to the Publishing Status")
+    publisher = models.CharField(max_length=100, null=True, blank=True, help_text="")
+    location = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                help_text="The country of the publication")
+    city = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True, help_text="")
+
+    publication = models.ForeignKey(Publication, on_delete=models.CASCADE)
+
+
+class Report(PublicationAbstract, AuthorEditor):
+    """Reports disseminating the outcomes and deliverables of a research contract. May entail a contribution to
+    public policy. """
+
+    year_submitted = models.CharField(max_length=4, null=True, blank=True, help_text="The year the report was submitted to the institution")
+    pages_count = models.IntegerField(null=True, blank=True, help_text="The number of pages in the document")
+    is_synthesis = models.BooleanField(null=True, blank=True, help_text="contextualization and integration of research findings of individual research studies within the larger body of knowledge on the topic")
+
+    organization = models.OneToOneField(Organization, on_delete=models.CASCADE, null=True, blank=True,
+                                        help_text="The name of the institution that consigned the report")
+    other_organization = models.OneToOneField(OtherOrganization, on_delete=models.CASCADE, null=True, blank=True)
+    publication = models.ForeignKey(Publication, on_delete=models.CASCADE)
+
+
+
+class WorkingPaper(PublicationAbstract, AuthorEditor):
+    """Preliminary versions of articles that have not undergone review but that may be shared for comment."""
+
+    year_completed = models.CharField(max_length=4, null=True, blank=True, help_text="The year the paper was completed")
+    pages_count = models.IntegerField(null=True, blank=True, help_text="The number of pages in the document")
+
+    publication = models.ForeignKey(Publication, on_delete=models.CASCADE)
+
+
+class Manual(PublicationAbstract):
+    """Course and assignment materials produced for teaching purposes"""
+
+    PUBLISHING_STATUS_CHOICES = (
+        ('Accepted', 'Accepted'),
+        ('In Press', 'In Press'),
+        ('Published', 'Published'),
+        ('Revision Requested', 'Revision Requested'),
+        ('Submitted', 'Submitted')
+    )
+
+    published_in = models.CharField(max_length=100, null=True, blank=True, help_text="The publication in which the manual was published")
+    edition = models.CharField(max_length=50, null=True, blank=True, help_text="The edition in which it was published")
+    volume = models.CharField(max_length=20, null=True, blank=True, help_text="The volume in which it was published")
+    volumes_count = models.IntegerField(null=True, blank=True, help_text="The total number of volumes contained in the manual")
+    pages_count = models.IntegerField(null=True, blank=True, help_text="The total number of pages in the manual")
+    status = models.CharField(max_length=30, null=True, blank=True, choices=PUBLISHING_STATUS_CHOICES, help_text="The status of the paper with regard to publication")
+    year = models.CharField(max_length=4, null=True, blank=True, help_text="The year relative to the Publishing Status")
+    publisher = models.CharField(max_length=100, null=True, blank=True, help_text="")
+    # location = models
+    # city
+
+
+class OnlineResource(PublicationAbstract, AuthorEditor):
+    """Information accessible only on the web via traditional technical methods (ie hyperlinks)"""
+
+    year_posted = models.CharField(max_length=4, null=True, blank=True, help_text="The year that it was posted online")
+
+
+class Test(PublicationAbstract, AuthorEditor):
+    """Assessments that include tests designed for general university selection, selection into specific courses or
+    other evaluation purposes """
+
+    year_released = models.CharField(max_length=4, null=True, blank=True, help_text="The year the guideline was first released")
+
+    publication = models.ForeignKey(Publication, on_delete=models.CASCADE)
+
+
+class ClinicalCareGuideline(PublicationAbstract):
+    """Clinical Care Guidelines are documents based on clinical evidence, designed to support the decision-making
+    process in patient care. Use this section to capture any Clinical Care Guidelines that you developed or
+    co-authored. """
+
+    year_released = models.CharField(max_length=4, null=True, blank=True, help_text="The year the guideline was first released")
+    contributors = models.CharField(max_length=200, null=True, blank=True, help_text="The names of the other contributors")
+
+    publication = models.ForeignKey(Publication, on_delete=models.CASCADE)
+
+
+class ConferencePublication(PublicationAbstract, AuthorEditor):
+    """Conference publications include Abstracts, Posters and Papers."""
+
+    TYPE_CHOICES = (
+        ('Abstract', 'Abstract'),
+        ('Paper', 'Paper'),
+        ('Poster', 'Poster')
+    )
+    STATUS_CHOICES = (
+        ('Accepted', 'Accepted'),
+        ('In Press', 'In Press'),
+        ('Published', 'Published'),
+        ('Revision Requested', 'Revision Requested'),
+        ('Submitted', 'Submitted')
+    )
+
+    type = models.CharField(max_length=10, null=True, blank=True, choices=TYPE_CHOICES, help_text="The nature of the conference publication")
+    name = models.CharField(max_length=250, null=True, blank=True, help_text="The name of the conference for which the document was written")
+    conference_location = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True, help_text="The country where the conference was held.")
+    city = models.CharField(max_length=100, null=True, blank=True, help_text="The city where the conference was held")
+    date = models.DateField(null=True, blank=True, help_text="The date the conference began")
+    published_in = models.CharField(max_length=100, null=True, blank=True, help_text="The title of the proceedings publication")
+    page_range = models.CharField(max_length=20, null=True, blank=True)
+    status = models.CharField(max_length=30, null=True, blank=True, choices=STATUS_CHOICES, help_text="The status of the paper with regard to publication")
+    year = models.CharField(max_length=4, null=True, blank=True, help_text="year relative to the Publishing Status")
+    publisher = models.CharField(max_length=100, null=True, blank=True, help_text="The name of the publisher of the conference proceedings")
+    publication_location = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True, help_text="The country of publication" )
+    is_refereed = models.BooleanField(null=True, blank=True, help_text="Indicate whether the document was refereed")
+    is_invited = models.BooleanField(null=True, blank=True, help_text="Indicate whether the author was invited to present at the conference")
+
+    publication = models.ForeignKey(Publication, on_delete=models.CASCADE)
+
+
+class ArtisticContribution(Base):
+    """Collection of information records that, in combination, represent a full and up-to-date history of artistic or
+    performance outputs resulting from, or related to, the person's research or scholarly activities. Works may be
+    produced alone or collaboratively as a creative practice that lead to production and dissemination. """
+
+    contribution = models.OneToOneField(Contribution, on_delete=models.DO_NOTHING)
+
+
+class ArtisticContributionAbstract(Base):
+    """It contains the fields which are common in Artistic Contribution fields."""
+
+    title = models.CharField(max_length=250, null=True, blank=True)
+    url = models.URLField(null=True, blank=True, help_text="The name of an associated website, if applicable")
+    role = models.CharField(max_length=100, null=True, blank=True, help_text="The nature of the person's role")
+    contributors_count = models.IntegerField(null=True, blank=True, help_text="The number of contributors")
+    contributors = models.CharField(max_length=200, null=True, blank=True,
+                                    help_text="The names of the other contributors")
+    contribution_value = models.CharField(max_length=1000, null=True, blank=True, help_text="")
+
+    class Meta:
+        abstract = True
+
+
+class ArtisticExhibition(ArtisticContributionAbstract):
+    """Showings of works of art under the direction of a curator, an artist or as a graduation exhibition."""
+
+    venue = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                             help_text="The venue where it was presented")
+    first_performance_date = models.DateField(null=True, blank=True, help_text="The date the piece was first presented")
+
+    artistic_contribution = models.ForeignKey(ArtisticContribution, on_delete=models.CASCADE)
+
+
+class AudioRecording(ArtisticContributionAbstract):
+    """Works such as classical or aboriginal music produced as a result of an artistic practice. May be produced and
+    be commercially disseminated. """
+
+    album_title = models.CharField(max_length=250, null=True ,blank=True, help_text="The title of the album on which it is recorded")
+    producer = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True, help_text="The producer's name")
+    distributor = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True, help_text="The name of the distributor of the album")
+    release_date = models.DateField(null=True, blank=True, help_text="The date of initial release of the recording")
+
+    artistic_contribution = models.ForeignKey(ArtisticContribution, on_delete=models.CASCADE)
+
+
+class ExhibitionCatalogue(ArtisticContributionAbstract):
+    """Publications for a temporary exhibition or installation at a gallery or alternative space. It documents the
+    contents of an exhibition, providing a forum for critical dialogue between curators, artists and critics. It
+    serves as a scholarly resource and is eligible for prestigious prizes. """
+
+    gallery_publisher = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True, help_text="The name of the gallery or publisher for which the catalogue was created")
+    publication_date = models.DateField(null=True, blank=True, help_text="The year and month the catalogue was published.")
+    publication_location = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True, help_text="The place where the catalogue was published")
+    publication_city = models.CharField(max_length=50, null=True, blank=True, help_text="City where the publication was published")
+    pages_count = models.IntegerField(null=True, blank=True, help_text="The total number of pages")
+    artists = models.CharField(max_length=250, null=True, blank=True, help_text="The names of the artists presented in the catalogue")
+
+    artistic_contribution = models.ForeignKey(ArtisticContribution, on_delete=models.CASCADE)
+
+
+class MusicalCompilation(ArtisticContributionAbstract):
+    """Original musical scores available in a format for dissemination"""
+
+    instrumentation_tags = models.CharField(max_length=250, null=True, blank=True, help_text="The instrument(s) for which it is written")
+    pages_count = models.IntegerField(null=True, blank=True, help_text="The total number of pages")
+    duration = models.CharField(max_length=10, null=True, blank=True)
+    publisher = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True, help_text="The publisher of the composition")
+    publication_date = models.DateField(null=True, blank=True,
+                                        help_text="The year and month the composition was published.")
+    publication_location = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                            help_text="The place where the composition was published")
+
+    artistic_contribution = models.ForeignKey(ArtisticContribution, on_delete=models.CASCADE)
+
+
+class MusicalPerformance(ArtisticContributionAbstract):
+    """Original musical scores available in a format for dissemination"""
+
+    venue = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                             help_text="The venue where it was presented")
+    first_performance_date = models.DateField(null=True, blank=True, help_text="The date the piece was first presented")
+
+    artistic_contribution = models.ForeignKey(ArtisticContribution, on_delete=models.CASCADE)
+
+
+class RadioAndTvProgram(ArtisticContributionAbstract):
+    """Programming produced for and broadcast on radio or TV"""
+
+    episode_title = models.CharField(max_length=250, null=True, blank=True, help_text="The title of the episode of the program")
+    no_of_episodes = models.IntegerField(null=True, blank=True, help_text="The number of episodes for which the person took part")
+    series_title = models.CharField(max_length=250, null=True, blank=True, help_text="The title of the series")
+    publication_date = models.DateField(null=True, blank=True,
+                                        help_text="The year and month the composition was published.")
+    publication_location = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                            help_text="The place where the composition was published")
+
+    artistic_contribution = models.ForeignKey(ArtisticContribution, on_delete=models.CASCADE)
+
+
+class Broadcast(Base):
+    """Broadcast details for the program"""
+
+    date = models.DateField(null=True, blank=True, help_text="The date of broadcast of the program")
+    network_name = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                    help_text="The network on which the program was broadcasted")
+
+    radio_and_tv_program = models.ForeignKey(RadioAndTvProgram, on_delete=models.CASCADE)
+
+
+class Scripts(ArtisticContributionAbstract):
+    """Written versions of a play, film, broadcast or other dramatic composition used in preparing for a performance
+    and annotated with instructions for the performance """
+
+    publication_date = models.DateField(null=True, blank=True, help_text="The date script was completed")
+    authors = models.CharField(max_length=200, null=True, blank=True, help_text="The names of other authors of the script")
+    editors = models.CharField(max_length=200, null=True, blank=True, help_text="The names of the editors")
+
+    artistic_contribution = models.ForeignKey(ArtisticContribution, on_delete=models.CASCADE)
+
+
+class Fiction(ArtisticContributionAbstract):
+    """Original literary texts"""
+
+    appeared_in = models.CharField(max_length=100, null=True, blank=True, help_text="The name of the publication in which the work appeared")
+    volume = models.CharField(max_length=20, null=True, blank=True, help_text="The volume number of the fiction")
+    issue = models.CharField(max_length=10, null=True, blank=True, help_text="The volume number of the fiction")
+    page_range = models.CharField(max_length=20, null=True, blank=True,
+                                  help_text="The page range with a dash ('-') as separator (e.g. 234-256)")
+    publication_date = models.DateField(null=True, blank=True, help_text="The date script was completed")
+    publisher = models.CharField(max_length=100, null=True, blank=True, help_text="The name of the publisher")
+    publication_location = models.CharField(max_length=50, null=True, blank=True, help_text="The country of publication")
+
+    authors = models.CharField(max_length=200, null=True, blank=True,
+                               help_text="The names of other authors of the function")
+    editors = models.CharField(max_length=200, null=True, blank=True, help_text="The names of the editors")
+
+    artistic_contribution = models.ForeignKey(ArtisticContribution, on_delete=models.CASCADE)
+
+
+class TheatrePerformanceAndProduction(ArtisticContributionAbstract):
+    """Creation, production, dissemination of plays by professional theatre artists and organizations. The artifacts,
+    such costumes, props, sets and scripts, may be the object of a public exhibit. """
+
+    producer = models.CharField(max_length=100, null=True, blank=True, help_text="The name of the producer of the work")
+    venue = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                             help_text="The venue in which the exhibition was given")
+    first_performance_date = models.DateField(null=True, blank=True, help_text="The date the work was first performed or exhibited")
+
+    artistic_contribution = models.ForeignKey(ArtisticContribution, on_delete=models.CASCADE)
+
+
+class VideoRecording(ArtisticContributionAbstract):
+    """Works such as film, video, or new media developed as a result of an artistic practice. May serve for
+    commercial purposes """
+
+    director = models.CharField(max_length=100, null=True, blank=True, help_text="The name of the director")
+    producer = models.CharField(max_length=100, null=True, blank=True, help_text="The name of the producer")
+    distributor = models.CharField(max_length=100, null=True, blank=True, help_text="The name of the producer")
+    release_date = models.DateField(null=True, blank=True, help_text="The date of initial release of the recording")
+
+    artistic_contribution = models.ForeignKey(ArtisticContribution, on_delete=models.CASCADE)
+
+
+class VisualArtwork(ArtisticContributionAbstract):
+    """Works such as film, video, or new media developed as a result of an artistic practice. May serve for
+    commercial purposes """
+
+    publication_date = models.DateField(null=True, blank=True, help_text="Date that the work was published")
+
+    artistic_contribution = models.ForeignKey(ArtisticContribution, on_delete=models.CASCADE)
+
+
+class SoundDesign(ArtisticContributionAbstract):
+    """Art and process of manipulating audio elements to achieve a desired effect. It is employed in a variety of
+    disciplines including film, theatre, music recording, and live music performance. It involves the manipulation of
+    previously composed audio or the creative composition of new audio. """
+
+    writer = models.CharField(max_length=100, null=True, blank=True, help_text="The writer of the show")
+    producer = models.CharField(max_length=100, null=True, blank=True, help_text="The producer of the show")
+    venue = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                             help_text="The venue in which the exhibition was given")
+    opening_date = models.DateField(null=True, blank=True, help_text="The date of the opening of the performance")
+
+
+class SetDesign(ArtisticContributionAbstract):
+    """Creations of theatrical, as well as film or television scenery (also known as stage design, scenic design or
+    production design) """
+
+    writer = models.CharField(max_length=100, null=True, blank=True, help_text="The writer of the show")
+    producer = models.CharField(max_length=100, null=True, blank=True, help_text="The producer of the show")
+    venue = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                             help_text="The venue in which the exhibition was given")
+    opening_date = models.DateField(null=True, blank=True, help_text="The date of the opening of the performance")
+
+
+class LightDesign(ArtisticContributionAbstract):
+    """Work done within theatre or in relation to an art installation to design a production"""
+
+    writer = models.CharField(max_length=100, blank=True, null=True, help_text="The writer of the show")
+    producer = models.CharField(max_length=100, blank=True, null=True, help_text="The producer of the show")
+    venue = models.CharField(max_length=100, blank=True, null=True, help_text="The venue in which the performance was "
+                                                                              "given")
+    opening_date = models.DateField(null=True, blank=True, help_text="The date of the opening of the performance")
+
+    artistic_contribution = models.ForeignKey(ArtisticContribution, on_delete=models.CASCADE)
+
+
+class Choreography(ArtisticContributionAbstract):
+    """Dance compositions created for production and dissemination"""
+
+    composer = models.CharField(max_length=100, null=True, blank=True, help_text="The name of the composer of the music")
+    company = models.CharField(max_length=250, null=True, blank=True, help_text="The name of the performing dance company")
+    premiere_date = models.DateField(null=True, blank=True, help_text="The date of the opening of the performance")
+    media_release_date = models.DateField(null=True, blank=True, help_text="The date the performance was released to the media")
+    principal_dancers = models.CharField(max_length=200, null=True, blank=True, help_text="The names of the principal dancers")
+
+    artistic_contribution = models.ForeignKey(ArtisticContribution, on_delete=models.CASCADE)
+
+
+class MajorPerformanceDate(Base):
+    """The dates that subsequent performances were given"""
+
+    date = models.DateField(null=True, blank=True, help_text="The date that performance was given")
+
+    choreography = models.ForeignKey(Choreography, on_delete=models.DO_NOTHING)
+
+
+class MuseumExhibition(ArtisticContributionAbstract):
+    """Exhibits under the guidance of a curator responsible for a collection"""
+
+    venue = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                             help_text="The venue in which the exhibition was given")
+    start_date = models.DateField(null=True, blank=True, help_text="The date of the opening of the exhibition")
+    end_date = models.DateField(null=True, blank=True, help_text="The date of the closing of the exhibition")
+    catalogue_title = models.CharField(max_length=250, null=True, blank=True, help_text="The title of the catalogue created for the exhibition")
+
+    artistic_contribution = models.ForeignKey(ArtisticContribution, on_delete=models.CASCADE)
+
+
+
+
+
+
+class PerformanceArt(ArtisticContributionAbstract):
+    """Avant-garde or conceptual pieces of music, song, dance or theatre performed for an audience. It may be
+    scripted or improvisational """
+
+    venue = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                             help_text="The venue in which the performance was given")
+
+    artistic_contribution = models.ForeignKey(ArtisticContribution, on_delete=models.CASCADE)
+
+
+class PerformanceDate(Base):
+    """The dates that major performances were given"""
+
+    date = models.DateField(null=True, blank=True, help_text="The date of a major performance")
+
+    performance_art = models.ForeignKey(PerformanceArt, on_delete=models.DO_NOTHING)
+
+
+class Poetry(ArtisticContributionAbstract):
+    """Poetry collections and performances"""
+
+    venue = models.CharField(max_length=250, null=True, blank=True,
+                             help_text="The venue in which the performance or exhibition was given, if applicable")
+    appeared_in = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True, help_text="The name of the publication in which the work appeared, if applicable")
+    volume = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True, help_text="The volume, if applicable")
+    issue = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True, help_text="The issue, if applicable")
+    page_range = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True, help_text="The page range with a dash ('-') as separator (e.g. 234-256), if applicable")
+    date = models.DateField(null=True, blank=True, help_text="The date of first presentation/production")
+    publisher = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True, help_text="The name of the publisher, if applicable")
+    country = models.CharField(max_length=50, null=True, blank=True, help_text="The country of the publication/performance")
+    authors = models.CharField(max_length=200, null=True, blank=True, help_text="")
+    editors = models.CharField(max_length=200, null=True, blank=True, help_text="")
+
+    artistic_contribution = models.ForeignKey(ArtisticContribution, on_delete=models.CASCADE)
+
+
+class OtherArtisticContribution(ArtisticContributionAbstract):
+    """Artistic or performance contributions that cannot be classified under the preceeding subsections which results
+    from, or is related to, the person's """
+
+    date = models.DateField(null=True, blank=True, help_text="The date of first presentation/production")
+    venue = models.CharField(max_length=200, null=True, blank=True,
+                             help_text="The venue in which the performance or exhibition was given, if applicable")
+
+    artistic_contribution = models.ForeignKey(ArtisticContribution, on_delete=models.CASCADE)
+
+
+
+class IntellectualProperty(Base):
+    """Collection of information records that, in combination, represent a full and up-to-date history of the
+    intellectual property owned by the person and resulting from, or related to, the person's research activities. """
+
+    contribution = models.OneToOneField(Contribution, on_delete=models.DO_NOTHING)
+
+
+class IntellectualPropertyAbstract(Base):
+    """It contains the fields which are common in Patent, License, Disclosure, RegisteredCopyright & Trademark"""
+
+    title = models.CharField(max_length=250, null=True, blank=True, help_text="The name of the patent")
+    filing_date = models.DateField(null=True, blank=True, help_text="The year patent was issued")
+    date_issued = models.DateField(null=True, blank=True, help_text="The date the license was issued")
+    end_date = models.DateField(null=True, blank=True, help_text="The date of expiry of the license")
+    contribution_or_impact = models.CharField(max_length=1000, null=True, blank=True,
+                                              help_text="Provide a concise description of this contribution and its value to and impact on the area of research for which you are applying for funding")
+    url = models.URLField(max_length=100, null=True, blank=True,
+                          help_text="The name of an associated website, if applicable")
+
+    class Meta:
+        abstract = True
+
+
+class Patent(Base):
+    """A form of IP protection that defines the exclusive right by law for inventors and assignees to make use of and
+    exploit their inventions, products or processes, for a limited period of time """
+
+    STATUS_CHOICES = (
+        ('Allowed', 'Allowed'),
+        ('Expired', 'Expired'),
+        ('Granted/Issued', 'Granted/Issued'),
+        ('Lapsed', 'Lapsed'),
+        ('Pending', 'Pending'),
+        ('Withdrawn', 'Withdrawn')
+    )
+
+    number = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                              help_text="The number of the patent")
+    location = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                help_text="The country in which the patent resides")
+    status = models.CharField(max_length=20, null=True, blank=True, choices=STATUS_CHOICES,
+                              help_text="Status of the patent")
+    inventors = models.CharField(max_length=1000, null=True, blank=True, help_text="")
+
+    intellectual_property = models.ForeignKey(IntellectualProperty, on_delete=models.CASCADE)
+
+
+class License:
+    """Signed agreements to exploit a piece of IP such as a process, product, data, or software"""
+
+    STATUS_CHOICES = (
+        ('Granted', 'Granted'),
+        ('In Negotiation', 'In Negotiation')
+    )
+
+    status = models.CharField(max_length=20, null=True, blank=True, choices=STATUS_CHOICES,
+                              help_text="The status of the license application")
+
+    intellectual_property = models.ForeignKey(IntellectualProperty, on_delete=models.CASCADE)
+
+
+class Disclosure(IntellectualPropertyAbstract):
+    """Publications that establish inventions as prior art thereby preventing others from patenting the same
+    invention or concept """
+
+    STATUS_CHOICES = (
+        ('Disclosed', 'Disclosed'),
+        ('Protected', 'Protected')
+    )
+
+    status = models.CharField(max_length=20, null=True, blank=True, help_text="Status of the disclosure application")
+
+    intellectual_property = models.ForeignKey(IntellectualProperty, on_delete=models.CASCADE)
+
+
+class RegisteredCopyright(IntellectualPropertyAbstract):
+    """Registered ownership of rights under a system of laws for promoting both the creation of and access to
+    artistic, literary, musical, dramatic and other creative works """
+
+    STATUS_CHOICES = (
+        ('Expunged', 'Expunged'),
+        ('First Fixation', 'First Fixation'),
+        ('Registered', 'Registered')
+    )
+
+    status = models.CharField(max_length=20, null=True, blank=True, help_text="status of the copyright registration")
+
+    intellectual_property = models.ForeignKey(IntellectualProperty, on_delete=models.CASCADE)
+
+
+class Trademark(IntellectualPropertyAbstract):
+    """Marks such as a name, word, phrase, logo, symbol, design, image of a product or service that indicates the
+    source and provides the right to control the use of the identifier """
+
+    STATUS_CHOICES = (
+        ('Pending', 'Pending'),
+        ('Registered', 'Registered')
+    )
+
+    status = models.CharField(max_length=20, null=True, blank=True, help_text="Status of the trademark registration")
+
+    intellectual_property = models.ForeignKey(IntellectualProperty, on_delete=models.CASCADE)
 
 
 class ResearchDiscipline(Base):
@@ -905,6 +2020,8 @@ class ResearchDiscipline(Base):
     academic_work_experience = models.ForeignKey(AcademicWorkExperience, on_delete=models.CASCADE)
     non_academic_work_experience = models.ForeignKey(NonAcademicWorkExperience, on_delete=models.CASCADE)
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+    research_funding_assessment_activity = models.ForeignKey(ResearchFundingApplicationAssessmentActivity,
+                                                             on_delete=models.CASCADE)
 
 
 class AreaOfResearch(Base):
@@ -924,6 +2041,8 @@ class AreaOfResearch(Base):
     academic_work_experience = models.ForeignKey(AcademicWorkExperience, on_delete=models.CASCADE)
     non_academic_work_experience = models.ForeignKey(NonAcademicWorkExperience, on_delete=models.CASCADE)
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+    research_funding_assessment_activity = models.ForeignKey(ResearchFundingApplicationAssessmentActivity,
+                                                             on_delete=models.CASCADE)
 
 
 class FieldOfApplication(Base):
@@ -940,3 +2059,5 @@ class FieldOfApplication(Base):
     academic_work_experience = models.ForeignKey(AcademicWorkExperience, on_delete=models.CASCADE)
     non_academic_work_experience = models.ForeignKey(NonAcademicWorkExperience, on_delete=models.CASCADE)
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+    research_funding_assessment_activity = models.ForeignKey(ResearchFundingApplicationAssessmentActivity,
+                                                             on_delete=models.CASCADE)
