@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import uuid
-from django.db import models
+
 from django.contrib.postgres.fields import ArrayField
+from django.db import models
 from djangoyearlessdate.models import YearlessDateField
+
 from .constants.db_constants import DEFAULT_COLUMN_LENGTH, NAME_LENGTH_MAX
-from .utils import normalize_string
 
 
 # TODO: Indexing the fields which will be used as filters in searching the CCVs
@@ -41,6 +42,7 @@ class CanadianCommonCv(Base):
     """Master table which links all entities like Identification, Education, Employment, Contribution, etc."""
 
     _id = models.CharField(max_length=40, db_index=True, unique=True)
+    slug = models.SlugField(help_text="Short label to be used in URL")
 
     def save(self, *args, **kwargs):
         self._id = uuid.uuid4().__str__()
@@ -921,7 +923,6 @@ class TeachingActivity(Base):
     activity = models.OneToOneField(Activity, on_delete=models.CASCADE)
 
 
-
 class CourseTaught(Base):
     """Services contributed in the form of courses taught at academic institutions with which the person is
     currently, or has in the past been, affiliated. """
@@ -976,7 +977,6 @@ class CourseTaught(Base):
     teaching_activity = models.ForeignKey(TeachingActivity, on_delete=models.CASCADE)
 
 
-
 class CoInstructor(Base):
     """The names of the instructors who assisted in teaching the course"""
 
@@ -988,7 +988,6 @@ class CoInstructor(Base):
     course_taught = models.ForeignKey(CourseTaught, on_delete=models.DO_NOTHING)
 
 
-
 class CourseDevelopment(Base):
     """Contributions in the development of courses/modules for training or teaching purposes."""
 
@@ -997,7 +996,6 @@ class CourseDevelopment(Base):
 
 class ProgramDevelopment(Base):
     """"""
-
 
 
 class CoDeveloper(Base):
@@ -1013,28 +1011,20 @@ class CoDeveloper(Base):
     # program_development = models.ForeignKey(CourseDevelopment, on_delete=models.DO_NOTHING, null=True, blank=True)
 
 
-
-
 class SupervisoryActivity(Base):
     """"""
-
-
 
 
 class StudentSupervision(Base):
     """"""
 
 
-
 class AdministrativeActivity(Base):
     """"""
 
 
-
 class AdvisoryActivity(Base):
     """"""
-
-
 
 
 class AssessmentAndReviewActivity(Base):
@@ -1244,7 +1234,8 @@ class CommunityAndVolunteerActivity(ActivityAbstract):
     sharing common characteristics or interests, but not directly related to the person's research activities """
 
     role = models.CharField(max_length=100, null=True, blank=True, help_text="The role of the person in this activity")
-    description = models.CharField(max_length=1000, null=True, blank=True, help_text="Description of the unpaid services")
+    description = models.CharField(max_length=1000, null=True, blank=True,
+                                   help_text="Description of the unpaid services")
 
     organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.DO_NOTHING,
                                         help_text="The name of the organization for which the service was undertaken")
@@ -1287,7 +1278,27 @@ class Contribution(Base):
     ccv = models.OneToOneField(CanadianCommonCv, on_delete=models.CASCADE)
 
 
-class Presentation(Base):
+class ContributionFundingSource(Base):
+    """Funding Source Model for Contribution Entity"""
+
+    organisation = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                    help_text="Main funding org name who has funced this contribution")
+    other_organization = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                          help_text="If someone cannot find the org from the list")
+    reference_number = models.CharField(max_length=20, null=True, blank=True,
+                                        help_text="reference number for the funds received")
+
+
+class ContributionAbstract(Base):
+
+    funding_source = models.ManyToManyField(FundingSource, related_name="%(app_label)s_%(class)s_related",
+                                            related_query_name="%(app_label)s_%(class)ss")
+
+    class Meta:
+        abstract = True
+
+
+class Presentation(ContributionAbstract):
     """Contributions of presentations to groups of people not delivered as part of a formal course of study"""
 
     MAIN_AUDIENCE_CHOICES = (
@@ -1324,7 +1335,7 @@ class Presentation(Base):
     contribution = models.ForeignKey(Contribution, on_delete=models.CASCADE)
 
 
-class InterviewAndMediumRelation(Base):
+class InterviewAndMediumRelation(ContributionAbstract):
     """Services contributed in the form of interview(s) with the person with a member of the broadcast (TV or radio)
     media. """
 
@@ -1345,8 +1356,10 @@ class BroadcastInterview(InterviewAndMediumRelation):
 
     program = models.CharField(max_length=250, null=True, blank=True, help_text="")
     network = models.CharField(max_length=250, null=True, blank=True, help_text="")
-    first_broadcast_date = models.DateField(null=True, blank=True, help_text="The date on which the interview was first aired")
-    end_date = models.DateField(null=True, blank=True, help_text="The date on which the broadcast of the interview ended")
+    first_broadcast_date = models.DateField(null=True, blank=True,
+                                            help_text="The date on which the interview was first aired")
+    end_date = models.DateField(null=True, blank=True,
+                                help_text="The date on which the broadcast of the interview ended")
 
     contribution = models.ForeignKey(Contribution, on_delete=models.CASCADE)
 
@@ -1354,8 +1367,10 @@ class BroadcastInterview(InterviewAndMediumRelation):
 class TextInterview(InterviewAndMediumRelation):
     """Services contributed in the form of interview(s) with the person with a member of the print or online media"""
 
-    forum = models.CharField(max_length=250, null=True, blank=True, help_text="The name of the forum for which the interview was conducted")
-    publication_date = models.DateField(null=True, blank=True, help_text="The date on which the interview was first published")
+    forum = models.CharField(max_length=250, null=True, blank=True,
+                             help_text="The name of the forum for which the interview was conducted")
+    publication_date = models.DateField(null=True, blank=True,
+                                        help_text="The date on which the interview was first published")
 
     contribution = models.ForeignKey(Contribution, on_delete=models.CASCADE)
 
@@ -1367,7 +1382,7 @@ class Publication(Base):
     contribution = models.OneToOneField(Contribution, on_delete=models.CASCADE)
 
 
-class PublicationAbstract(Base):
+class PublicationAbstract(ContributionAbstract):
     """"""
 
     CONTRIBUTION_PERCENTAGE_CHOICES = (
@@ -1393,7 +1408,8 @@ class PublicationAbstract(Base):
     title = models.CharField(max_length=250, null=True, blank=True)
     contribution_value = models.CharField(max_length=1000, null=True, blank=True, help_text="")
     url = models.URLField(max_length=500, null=True, blank=True, help_text="")
-    role = models.CharField(max_length=30, null=True, blank=True, choices=ROLE_CHOICES, help_text="The nature of the person's role")
+    role = models.CharField(max_length=30, null=True, blank=True, choices=ROLE_CHOICES,
+                            help_text="The nature of the person's role")
     contributors_count = models.IntegerField(null=True, blank=True, help_text="The number of contributors")
     contribution_percentage = models.CharField(max_length=10, null=True, blank=True,
                                                choices=CONTRIBUTION_PERCENTAGE_CHOICES,
@@ -1420,12 +1436,11 @@ class AuthorEditor(models.Model):
 
 
 class PublicationStaticAbstract(PublicationAbstract, AuthorEditor):
-
-
+    pass
 
 
 class JournalArticle(Base):
-    """Articles in peer-reviewed publications that disseminate the results of original research and scholarship"""
+    """"Articles in peer-reviewed publications that disseminate the results of original research and scholarship"""
 
     STATUS_CHOICES = (
         ('Accepted', 'Accepted'),
@@ -1434,8 +1449,6 @@ class JournalArticle(Base):
         ('Revision Requested', 'Revision Requested'),
         ('Submitted', 'Submitted')
     )
-
-
 
     title = models.CharField(max_length=250, null=True, blank=True, help_text="The title of the article")
     journal = models.CharField(max_length=200, null=True, blank=True,
@@ -1479,9 +1492,11 @@ class Translation(PublicationAbstract):
 class EncyclopediaEntry:
     """Authored entries in a reference work or a compendium focusing on a particular domain or on all branches of knowledge."""
 
+
 class MagazineEntry(PublicationAbstract, AuthorEditor):
     """Articles in thematic publications published at fixed intervals"""
     # FIXME: Needs review
+
 
 class DictionaryEntry(PublicationAbstract, AuthorEditor):
     """Entries of new words, new meanings of existing words, changes in spelling and hyphenation over a longer period
@@ -1507,15 +1522,16 @@ class Report(PublicationAbstract, AuthorEditor):
     """Reports disseminating the outcomes and deliverables of a research contract. May entail a contribution to
     public policy. """
 
-    year_submitted = models.CharField(max_length=4, null=True, blank=True, help_text="The year the report was submitted to the institution")
+    year_submitted = models.CharField(max_length=4, null=True, blank=True,
+                                      help_text="The year the report was submitted to the institution")
     pages_count = models.IntegerField(null=True, blank=True, help_text="The number of pages in the document")
-    is_synthesis = models.BooleanField(null=True, blank=True, help_text="contextualization and integration of research findings of individual research studies within the larger body of knowledge on the topic")
+    is_synthesis = models.BooleanField(null=True, blank=True,
+                                       help_text="contextualization and integration of research findings of individual research studies within the larger body of knowledge on the topic")
 
     organization = models.OneToOneField(Organization, on_delete=models.CASCADE, null=True, blank=True,
                                         help_text="The name of the institution that consigned the report")
     other_organization = models.OneToOneField(OtherOrganization, on_delete=models.CASCADE, null=True, blank=True)
     publication = models.ForeignKey(Publication, on_delete=models.CASCADE)
-
 
 
 class WorkingPaper(PublicationAbstract, AuthorEditor):
@@ -1538,12 +1554,15 @@ class Manual(PublicationAbstract):
         ('Submitted', 'Submitted')
     )
 
-    published_in = models.CharField(max_length=100, null=True, blank=True, help_text="The publication in which the manual was published")
+    published_in = models.CharField(max_length=100, null=True, blank=True,
+                                    help_text="The publication in which the manual was published")
     edition = models.CharField(max_length=50, null=True, blank=True, help_text="The edition in which it was published")
     volume = models.CharField(max_length=20, null=True, blank=True, help_text="The volume in which it was published")
-    volumes_count = models.IntegerField(null=True, blank=True, help_text="The total number of volumes contained in the manual")
+    volumes_count = models.IntegerField(null=True, blank=True,
+                                        help_text="The total number of volumes contained in the manual")
     pages_count = models.IntegerField(null=True, blank=True, help_text="The total number of pages in the manual")
-    status = models.CharField(max_length=30, null=True, blank=True, choices=PUBLISHING_STATUS_CHOICES, help_text="The status of the paper with regard to publication")
+    status = models.CharField(max_length=30, null=True, blank=True, choices=PUBLISHING_STATUS_CHOICES,
+                              help_text="The status of the paper with regard to publication")
     year = models.CharField(max_length=4, null=True, blank=True, help_text="The year relative to the Publishing Status")
     publisher = models.CharField(max_length=100, null=True, blank=True, help_text="")
     # location = models
@@ -1560,7 +1579,8 @@ class Test(PublicationAbstract, AuthorEditor):
     """Assessments that include tests designed for general university selection, selection into specific courses or
     other evaluation purposes """
 
-    year_released = models.CharField(max_length=4, null=True, blank=True, help_text="The year the guideline was first released")
+    year_released = models.CharField(max_length=4, null=True, blank=True,
+                                     help_text="The year the guideline was first released")
 
     publication = models.ForeignKey(Publication, on_delete=models.CASCADE)
 
@@ -1570,8 +1590,10 @@ class ClinicalCareGuideline(PublicationAbstract):
     process in patient care. Use this section to capture any Clinical Care Guidelines that you developed or
     co-authored. """
 
-    year_released = models.CharField(max_length=4, null=True, blank=True, help_text="The year the guideline was first released")
-    contributors = models.CharField(max_length=200, null=True, blank=True, help_text="The names of the other contributors")
+    year_released = models.CharField(max_length=4, null=True, blank=True,
+                                     help_text="The year the guideline was first released")
+    contributors = models.CharField(max_length=200, null=True, blank=True,
+                                    help_text="The names of the other contributors")
 
     publication = models.ForeignKey(Publication, on_delete=models.CASCADE)
 
@@ -1592,19 +1614,27 @@ class ConferencePublication(PublicationAbstract, AuthorEditor):
         ('Submitted', 'Submitted')
     )
 
-    type = models.CharField(max_length=10, null=True, blank=True, choices=TYPE_CHOICES, help_text="The nature of the conference publication")
-    name = models.CharField(max_length=250, null=True, blank=True, help_text="The name of the conference for which the document was written")
-    conference_location = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True, help_text="The country where the conference was held.")
+    type = models.CharField(max_length=10, null=True, blank=True, choices=TYPE_CHOICES,
+                            help_text="The nature of the conference publication")
+    name = models.CharField(max_length=250, null=True, blank=True,
+                            help_text="The name of the conference for which the document was written")
+    conference_location = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                           help_text="The country where the conference was held.")
     city = models.CharField(max_length=100, null=True, blank=True, help_text="The city where the conference was held")
     date = models.DateField(null=True, blank=True, help_text="The date the conference began")
-    published_in = models.CharField(max_length=100, null=True, blank=True, help_text="The title of the proceedings publication")
+    published_in = models.CharField(max_length=100, null=True, blank=True,
+                                    help_text="The title of the proceedings publication")
     page_range = models.CharField(max_length=20, null=True, blank=True)
-    status = models.CharField(max_length=30, null=True, blank=True, choices=STATUS_CHOICES, help_text="The status of the paper with regard to publication")
+    status = models.CharField(max_length=30, null=True, blank=True, choices=STATUS_CHOICES,
+                              help_text="The status of the paper with regard to publication")
     year = models.CharField(max_length=4, null=True, blank=True, help_text="year relative to the Publishing Status")
-    publisher = models.CharField(max_length=100, null=True, blank=True, help_text="The name of the publisher of the conference proceedings")
-    publication_location = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True, help_text="The country of publication" )
+    publisher = models.CharField(max_length=100, null=True, blank=True,
+                                 help_text="The name of the publisher of the conference proceedings")
+    publication_location = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                            help_text="The country of publication")
     is_refereed = models.BooleanField(null=True, blank=True, help_text="Indicate whether the document was refereed")
-    is_invited = models.BooleanField(null=True, blank=True, help_text="Indicate whether the author was invited to present at the conference")
+    is_invited = models.BooleanField(null=True, blank=True,
+                                     help_text="Indicate whether the author was invited to present at the conference")
 
     publication = models.ForeignKey(Publication, on_delete=models.CASCADE)
 
@@ -1617,7 +1647,7 @@ class ArtisticContribution(Base):
     contribution = models.OneToOneField(Contribution, on_delete=models.DO_NOTHING)
 
 
-class ArtisticContributionAbstract(Base):
+class ArtisticContributionAbstract(ContributionAbstract):
     """It contains the fields which are common in Artistic Contribution fields."""
 
     title = models.CharField(max_length=250, null=True, blank=True)
@@ -1646,9 +1676,12 @@ class AudioRecording(ArtisticContributionAbstract):
     """Works such as classical or aboriginal music produced as a result of an artistic practice. May be produced and
     be commercially disseminated. """
 
-    album_title = models.CharField(max_length=250, null=True ,blank=True, help_text="The title of the album on which it is recorded")
-    producer = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True, help_text="The producer's name")
-    distributor = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True, help_text="The name of the distributor of the album")
+    album_title = models.CharField(max_length=250, null=True, blank=True,
+                                   help_text="The title of the album on which it is recorded")
+    producer = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                help_text="The producer's name")
+    distributor = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                   help_text="The name of the distributor of the album")
     release_date = models.DateField(null=True, blank=True, help_text="The date of initial release of the recording")
 
     artistic_contribution = models.ForeignKey(ArtisticContribution, on_delete=models.CASCADE)
@@ -1659,12 +1692,17 @@ class ExhibitionCatalogue(ArtisticContributionAbstract):
     contents of an exhibition, providing a forum for critical dialogue between curators, artists and critics. It
     serves as a scholarly resource and is eligible for prestigious prizes. """
 
-    gallery_publisher = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True, help_text="The name of the gallery or publisher for which the catalogue was created")
-    publication_date = models.DateField(null=True, blank=True, help_text="The year and month the catalogue was published.")
-    publication_location = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True, help_text="The place where the catalogue was published")
-    publication_city = models.CharField(max_length=50, null=True, blank=True, help_text="City where the publication was published")
+    gallery_publisher = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                         help_text="The name of the gallery or publisher for which the catalogue was created")
+    publication_date = models.DateField(null=True, blank=True,
+                                        help_text="The year and month the catalogue was published.")
+    publication_location = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                            help_text="The place where the catalogue was published")
+    publication_city = models.CharField(max_length=50, null=True, blank=True,
+                                        help_text="City where the publication was published")
     pages_count = models.IntegerField(null=True, blank=True, help_text="The total number of pages")
-    artists = models.CharField(max_length=250, null=True, blank=True, help_text="The names of the artists presented in the catalogue")
+    artists = models.CharField(max_length=250, null=True, blank=True,
+                               help_text="The names of the artists presented in the catalogue")
 
     artistic_contribution = models.ForeignKey(ArtisticContribution, on_delete=models.CASCADE)
 
@@ -1672,10 +1710,12 @@ class ExhibitionCatalogue(ArtisticContributionAbstract):
 class MusicalCompilation(ArtisticContributionAbstract):
     """Original musical scores available in a format for dissemination"""
 
-    instrumentation_tags = models.CharField(max_length=250, null=True, blank=True, help_text="The instrument(s) for which it is written")
+    instrumentation_tags = models.CharField(max_length=250, null=True, blank=True,
+                                            help_text="The instrument(s) for which it is written")
     pages_count = models.IntegerField(null=True, blank=True, help_text="The total number of pages")
     duration = models.CharField(max_length=10, null=True, blank=True)
-    publisher = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True, help_text="The publisher of the composition")
+    publisher = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                 help_text="The publisher of the composition")
     publication_date = models.DateField(null=True, blank=True,
                                         help_text="The year and month the composition was published.")
     publication_location = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
@@ -1697,8 +1737,10 @@ class MusicalPerformance(ArtisticContributionAbstract):
 class RadioAndTvProgram(ArtisticContributionAbstract):
     """Programming produced for and broadcast on radio or TV"""
 
-    episode_title = models.CharField(max_length=250, null=True, blank=True, help_text="The title of the episode of the program")
-    no_of_episodes = models.IntegerField(null=True, blank=True, help_text="The number of episodes for which the person took part")
+    episode_title = models.CharField(max_length=250, null=True, blank=True,
+                                     help_text="The title of the episode of the program")
+    no_of_episodes = models.IntegerField(null=True, blank=True,
+                                         help_text="The number of episodes for which the person took part")
     series_title = models.CharField(max_length=250, null=True, blank=True, help_text="The title of the series")
     publication_date = models.DateField(null=True, blank=True,
                                         help_text="The year and month the composition was published.")
@@ -1723,7 +1765,8 @@ class Scripts(ArtisticContributionAbstract):
     and annotated with instructions for the performance """
 
     publication_date = models.DateField(null=True, blank=True, help_text="The date script was completed")
-    authors = models.CharField(max_length=200, null=True, blank=True, help_text="The names of other authors of the script")
+    authors = models.CharField(max_length=200, null=True, blank=True,
+                               help_text="The names of other authors of the script")
     editors = models.CharField(max_length=200, null=True, blank=True, help_text="The names of the editors")
 
     artistic_contribution = models.ForeignKey(ArtisticContribution, on_delete=models.CASCADE)
@@ -1732,14 +1775,16 @@ class Scripts(ArtisticContributionAbstract):
 class Fiction(ArtisticContributionAbstract):
     """Original literary texts"""
 
-    appeared_in = models.CharField(max_length=100, null=True, blank=True, help_text="The name of the publication in which the work appeared")
+    appeared_in = models.CharField(max_length=100, null=True, blank=True,
+                                   help_text="The name of the publication in which the work appeared")
     volume = models.CharField(max_length=20, null=True, blank=True, help_text="The volume number of the fiction")
     issue = models.CharField(max_length=10, null=True, blank=True, help_text="The volume number of the fiction")
     page_range = models.CharField(max_length=20, null=True, blank=True,
                                   help_text="The page range with a dash ('-') as separator (e.g. 234-256)")
     publication_date = models.DateField(null=True, blank=True, help_text="The date script was completed")
     publisher = models.CharField(max_length=100, null=True, blank=True, help_text="The name of the publisher")
-    publication_location = models.CharField(max_length=50, null=True, blank=True, help_text="The country of publication")
+    publication_location = models.CharField(max_length=50, null=True, blank=True,
+                                            help_text="The country of publication")
 
     authors = models.CharField(max_length=200, null=True, blank=True,
                                help_text="The names of other authors of the function")
@@ -1755,7 +1800,8 @@ class TheatrePerformanceAndProduction(ArtisticContributionAbstract):
     producer = models.CharField(max_length=100, null=True, blank=True, help_text="The name of the producer of the work")
     venue = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
                              help_text="The venue in which the exhibition was given")
-    first_performance_date = models.DateField(null=True, blank=True, help_text="The date the work was first performed or exhibited")
+    first_performance_date = models.DateField(null=True, blank=True,
+                                              help_text="The date the work was first performed or exhibited")
 
     artistic_contribution = models.ForeignKey(ArtisticContribution, on_delete=models.CASCADE)
 
@@ -1819,11 +1865,15 @@ class LightDesign(ArtisticContributionAbstract):
 class Choreography(ArtisticContributionAbstract):
     """Dance compositions created for production and dissemination"""
 
-    composer = models.CharField(max_length=100, null=True, blank=True, help_text="The name of the composer of the music")
-    company = models.CharField(max_length=250, null=True, blank=True, help_text="The name of the performing dance company")
+    composer = models.CharField(max_length=100, null=True, blank=True,
+                                help_text="The name of the composer of the music")
+    company = models.CharField(max_length=250, null=True, blank=True,
+                               help_text="The name of the performing dance company")
     premiere_date = models.DateField(null=True, blank=True, help_text="The date of the opening of the performance")
-    media_release_date = models.DateField(null=True, blank=True, help_text="The date the performance was released to the media")
-    principal_dancers = models.CharField(max_length=200, null=True, blank=True, help_text="The names of the principal dancers")
+    media_release_date = models.DateField(null=True, blank=True,
+                                          help_text="The date the performance was released to the media")
+    principal_dancers = models.CharField(max_length=200, null=True, blank=True,
+                                         help_text="The names of the principal dancers")
 
     artistic_contribution = models.ForeignKey(ArtisticContribution, on_delete=models.CASCADE)
 
@@ -1843,13 +1893,10 @@ class MuseumExhibition(ArtisticContributionAbstract):
                              help_text="The venue in which the exhibition was given")
     start_date = models.DateField(null=True, blank=True, help_text="The date of the opening of the exhibition")
     end_date = models.DateField(null=True, blank=True, help_text="The date of the closing of the exhibition")
-    catalogue_title = models.CharField(max_length=250, null=True, blank=True, help_text="The title of the catalogue created for the exhibition")
+    catalogue_title = models.CharField(max_length=250, null=True, blank=True,
+                                       help_text="The title of the catalogue created for the exhibition")
 
     artistic_contribution = models.ForeignKey(ArtisticContribution, on_delete=models.CASCADE)
-
-
-
-
 
 
 class PerformanceArt(ArtisticContributionAbstract):
@@ -1875,13 +1922,19 @@ class Poetry(ArtisticContributionAbstract):
 
     venue = models.CharField(max_length=250, null=True, blank=True,
                              help_text="The venue in which the performance or exhibition was given, if applicable")
-    appeared_in = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True, help_text="The name of the publication in which the work appeared, if applicable")
-    volume = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True, help_text="The volume, if applicable")
-    issue = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True, help_text="The issue, if applicable")
-    page_range = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True, help_text="The page range with a dash ('-') as separator (e.g. 234-256), if applicable")
+    appeared_in = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                   help_text="The name of the publication in which the work appeared, if applicable")
+    volume = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                              help_text="The volume, if applicable")
+    issue = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                             help_text="The issue, if applicable")
+    page_range = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                  help_text="The page range with a dash ('-') as separator (e.g. 234-256), if applicable")
     date = models.DateField(null=True, blank=True, help_text="The date of first presentation/production")
-    publisher = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True, help_text="The name of the publisher, if applicable")
-    country = models.CharField(max_length=50, null=True, blank=True, help_text="The country of the publication/performance")
+    publisher = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                 help_text="The name of the publisher, if applicable")
+    country = models.CharField(max_length=50, null=True, blank=True,
+                               help_text="The country of the publication/performance")
     authors = models.CharField(max_length=200, null=True, blank=True, help_text="")
     editors = models.CharField(max_length=200, null=True, blank=True, help_text="")
 
@@ -1899,7 +1952,6 @@ class OtherArtisticContribution(ArtisticContributionAbstract):
     artistic_contribution = models.ForeignKey(ArtisticContribution, on_delete=models.CASCADE)
 
 
-
 class IntellectualProperty(Base):
     """Collection of information records that, in combination, represent a full and up-to-date history of the
     intellectual property owned by the person and resulting from, or related to, the person's research activities. """
@@ -1907,7 +1959,7 @@ class IntellectualProperty(Base):
     contribution = models.OneToOneField(Contribution, on_delete=models.DO_NOTHING)
 
 
-class IntellectualPropertyAbstract(Base):
+class IntellectualPropertyAbstract(ContributionAbstract):
     """It contains the fields which are common in Patent, License, Disclosure, RegisteredCopyright & Trademark"""
 
     title = models.CharField(max_length=250, null=True, blank=True, help_text="The name of the patent")
@@ -1915,7 +1967,9 @@ class IntellectualPropertyAbstract(Base):
     date_issued = models.DateField(null=True, blank=True, help_text="The date the license was issued")
     end_date = models.DateField(null=True, blank=True, help_text="The date of expiry of the license")
     contribution_or_impact = models.CharField(max_length=1000, null=True, blank=True,
-                                              help_text="Provide a concise description of this contribution and its value to and impact on the area of research for which you are applying for funding")
+                                              help_text="Provide a concise description of this contribution and its "
+                                                        "value to and impact on the area of research for which you are applying "
+                                                        "for funding")
     url = models.URLField(max_length=100, null=True, blank=True,
                           help_text="The name of an associated website, if applicable")
 
@@ -1923,7 +1977,7 @@ class IntellectualPropertyAbstract(Base):
         abstract = True
 
 
-class Patent(Base):
+class Patent(IntellectualPropertyAbstract):
     """A form of IP protection that defines the exclusive right by law for inventors and assignees to make use of and
     exploit their inventions, products or processes, for a limited period of time """
 
@@ -1947,7 +2001,7 @@ class Patent(Base):
     intellectual_property = models.ForeignKey(IntellectualProperty, on_delete=models.CASCADE)
 
 
-class License:
+class License(IntellectualPropertyAbstract):
     """Signed agreements to exploit a piece of IP such as a process, product, data, or software"""
 
     STATUS_CHOICES = (
