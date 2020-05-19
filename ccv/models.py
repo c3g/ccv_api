@@ -1271,6 +1271,8 @@ class InternationalCollaborationActivity(ActivityAbstract):
 
     activity = models.ForeignKey(Activity, on_delete=models.CASCADE)
 
+########################################################################################################################
+
 
 class Contribution(Base):
     """The things you have done as part of your career"""
@@ -1282,7 +1284,7 @@ class ContributionFundingSource(Base):
     """Funding Source Model for Contribution Entity"""
 
     organisation = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
-                                    help_text="Main funding org name who has funced this contribution")
+                                    help_text="Main funding org name who has funded this contribution")
     other_organization = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
                                           help_text="If someone cannot find the org from the list")
     reference_number = models.CharField(max_length=20, null=True, blank=True,
@@ -1326,7 +1328,8 @@ class Presentation(ContributionAbstract):
     presentation_year = models.CharField(max_length=4, null=True, blank=True,
                                          help_text="The year the presentation was given")
     description = models.CharField(max_length=1000, null=True, blank=True,
-                                   help_text="Provide a concise description of this contribution and its value to the area of research for which you are applying for funding")
+                                   help_text="Concise description of this contribution and its value to the area of "
+                                             "research for which you are applying for funding")
     url = models.URLField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
                           help_text="The name of an associated website, if applicable")
     co_presenters = models.CharField(max_length=200, null=True, blank=True,
@@ -1435,13 +1438,8 @@ class AuthorEditor(models.Model):
         abstract = True
 
 
-class PublicationStaticAbstract(PublicationAbstract, AuthorEditor):
-    pass
-
-
-class JournalArticle(Base):
-    """"Articles in peer-reviewed publications that disseminate the results of original research and scholarship"""
-
+class PublicationStaticAbstract(PublicationAbstract):
+    """"""
     STATUS_CHOICES = (
         ('Accepted', 'Accepted'),
         ('In Press', 'In Press'),
@@ -1450,52 +1448,190 @@ class JournalArticle(Base):
         ('Submitted', 'Submitted')
     )
 
-    title = models.CharField(max_length=250, null=True, blank=True, help_text="The title of the article")
+    publishing_status = models.CharField(max_length=30, choices=STATUS_CHOICES, null=True, blank=True,
+                                         help_text="The status of the article with regard to publication")
+    year = models.CharField(max_length=4, null=True, blank=True, help_text="The year relative to the Publishing Status")
+    publisher = models.CharField(max_length=100, null=True, blank=True, help_text="The name of the publisher")
+    publication_location = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                            help_text="The place where it was published")
+
+
+class Journal(PublicationAbstract, AuthorEditor):
+    """"Journal Article & Journal Type has been combined to one entity Journal because it contains all common fields."""
+
+    TYPE_CHOICES = (
+        ('Issue', 'Issue'),
+        ('Article', 'Article')
+    )
+
     journal = models.CharField(max_length=200, null=True, blank=True,
                                help_text="The name of the journal in which the article is published, or to be published")
     volume = models.CharField(max_length=20, null=True, blank=True, help_text="The volume number of the journal")
     issue = models.CharField(max_length=10, null=True, blank=True, help_text="The volume number of the journal")
     page_range = models.CharField(max_length=20, null=True, blank=True,
                                   help_text="The page range with a dash ('-') as separator (e.g. 234-256)")
-    publishing_status = models.CharField(max_length=30, choices=STATUS_CHOICES, null=True, blank=True,
-                                         help_text="The status of the article with regard to publication")
+    publisher = models.CharField(max_length=100, null=True, blank=True, help_text="The name of the publisher")
+    publication_location = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                            help_text="The country where it was published")
+    is_refereed = models.BooleanField(null=True, blank=True, help_text="Indicate if the journal is refereed")
+    is_open_access = models.BooleanField(null=True, blank=True, help_text="Indicate if the journal is open access")
+    is_synthesis = models.BooleanField(null=True, blank=True,
+                                       help_text="contextualization and integration of research findings of "
+                                                 "individual research within the larger body of knowledge on topic")
+    journal_type = models.CharField(max_length=10, choices=TYPE_CHOICES,
+                                    help_text="This field is to indicate journal type")
+
+    publication = models.ForeignKey(Publication, on_delete=models.CASCADE)
 
 
-class JournalIssue(PublicationAbstract):
-    """"""
+class Book(PublicationStaticAbstract, AuthorEditor):
+    """Books written by a single author or collaboratively based on research or scholarly findings generally derived
+    from peer reviewed funding """
+###
+    publication_city = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                        help_text="City where the publication was published")
+    is_refereed = models.BooleanField(null=True, blank=True, help_text="Indicate if the project was refereed")
 
-    journal = models.CharField(max_length=200, null=True, blank=True, help_text="The title of the journal")
+    publication = models.ForeignKey(Publication, on_delete=models.CASCADE)
 
 
-class Book(PublicationAbstract):
-    """Books written by a single author or collaboratively based on research or scholarly findings generally derived from peer reviewed funding"""
+class BookChapter(PublicationStaticAbstract, AuthorEditor):
+    """Texts written by a single author or collaboratively based on research or scholarly findings and expertise in a
+    field """
 
+    book_title = models.CharField(max_length=250, null=True, blank=True, help_text="The title of the book")
+    publication_city = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                        help_text="City where the publication was published")
+    is_refereed = models.BooleanField(null=True, blank=True, help_text="Indicate if the project was refereed")
 
-class BookChapter(PublicationAbstract):
-    """"""
+    publication = models.ForeignKey(Publication, on_delete=models.CASCADE)
 
 
 class BookReview(PublicationAbstract):
-    """"""
+    """Critical review of works of fiction or non-fiction highlighting the contributions to an art,
+    field or discipline """
+###
+    review_year = models.CharField(max_length=4, null=True, blank=True, help_text="The year the review was published")
+    reviewed_title = models.CharField(max_length=250, null=True, blank=True,
+                                      help_text="The title of the book that was reviewed")
+    reviewed_edition = models.CharField(max_length=50, null=True, blank=True,
+                                        help_text="The edition of the book that was reviewed")
+    reviewed_volume = models.CharField(max_length=20, null=True, blank=True,
+                                       help_text="The publication Year of the book that was reviewed")
+    reviewed_publication_year = models.CharField(max_length=4, null=True, blank=True,
+                                                 help_text="The publication Year of the book that was reviewed")
+    reviewed_author = models.CharField(max_length=1000, null=True, blank=True)
+
+    is_refereed = models.BooleanField(null=True, blank=True, help_text="Indicate if the project was refereed")
+
+    publication = models.ForeignKey(Publication, on_delete=models.CASCADE)
 
 
-class Translation(PublicationAbstract):
-    """Translations of books and articles that identify modifications to the original edition, such as a new or revised preface."""
+class Translation(PublicationStaticAbstract):
+    """Translations of books and articles that identify modifications to the original edition, such as a new or
+    revised preface. """
+###
+    published_in = models.CharField(max_length=100, null=True, blank=True,
+                                    help_text="The publication in which the translation was published")
+    publication_city = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                        help_text="City where the publication was published")
+
+    publication = models.ForeignKey(Publication, on_delete=models.CASCADE)
 
 
-# class ThesisDissertation:
-#
-# class SupervisedStudentPublication:
-#
-# class Litigation:
-# class NewspaperArticle:
-class EncyclopediaEntry:
-    """Authored entries in a reference work or a compendium focusing on a particular domain or on all branches of knowledge."""
+class ThesisDissertation(PublicationAbstract):
+    """Treatise advancing an original point of view resulting from research."""
+
+    DEGREE_TYPE_CHOICES = (
+        ('Bachelor\'s', 'Bachelor\'s'),
+        ('Bachelor\'s Equivalent', 'Bachelor\'s Equivalent'),
+        ('Bachelor\'s Honours', 'Bachelor\'s Honours'),
+        ('Master\'s Equivalent', 'Master\'s Equivalent'),
+        ('Master\'s non-Thesis', 'Master\'s non-Thesis'),
+        ('Master\'s Thesis', 'Master\'s Thesis'),
+        ('Doctorate', 'Doctorate'),
+        ('Doctorate Equivalent', 'Doctorate Equivalent'),
+        ('Post-doctorate', 'Post-doctorate'),
+        ('Certificate', 'Certificate'),
+        ('Diploma', 'Diploma'),
+        ('Habilitation', 'Habilitation'),
+        ('Research Associate', 'Research Associate')
+    )
+
+    supervisor = models.CharField(max_length=100, null=True, blank=True,
+                                  help_text="The family and first name of the supervisor")
+    completion_year = models.CharField(max_length=4, null=True, blank=True,
+                                       help_text="The year the dissertation was completed")
+    degree_type = models.CharField(null=True, blank=True, max_length=30, choices=DEGREE_TYPE_CHOICES,
+                                   help_text="The designation of the person's degree")
+    pages_count = models.IntegerField(null=True, blank=True, help_text="Number of pages of the dissertation")
+
+    organization = models.OneToOneField(Organization, on_delete=models.CASCADE, null=True, blank=True,
+                                       help_text="The name of the institution that consigned the report")
+    other_organization = models.OneToOneField(OtherOrganization, on_delete=models.CASCADE, null=True, blank=True)
+    publication = models.ForeignKey(Publication, on_delete=models.CASCADE)
 
 
-class MagazineEntry(PublicationAbstract, AuthorEditor):
+class SupervisedStudentPublication(PublicationStaticAbstract):
+    """Articles on research findings published jointly with or supervised by the thesis advisor. The findings relate
+    to research undertaken by the student or the supervisor’s program of research. """
+###
+    student = models.CharField(max_length=100, null=True, blank=True, help_text="name of student who was supervised")
+    published_in = models.CharField(max_length=100, null=True, blank=True,
+                                    help_text="Name of the journal in which article is published, or to be published")
+    student_contribution = models.IntegerField(null=True, blank=True,
+                                               help_text="Indicate the approximate contribution of the student "
+                                                         "towards this publication")
+
+    publication = models.ForeignKey(Publication, on_delete=models.CASCADE)
+
+
+class Litigation(PublicationAbstract):
+    """The act or process of contesting at law"""
+
+    person_acted_for = models.CharField(max_length=100, null=True, blank=True,
+                                        help_text="The name of the person the person represented/acted for")
+    court = models.CharField(max_length=250, null=True, blank=True, help_text="The court in which the case was heard")
+    location = models.CharField(max_length=50, null=True, blank=True,
+                                help_text="The location of the court in which the case was heard")
+    year_started = models.CharField(max_length=4, null=True, blank=True,
+                                    help_text="The year the case started")
+    end_year = models.CharField(max_length=4, null=True, blank=True, help_text="The year the case ended")
+    key_legal_issues = models.CharField(max_length=1000, null=True, blank=True,
+                                        help_text="A description of the key issues in the case")
+
+    publication = models.ForeignKey(Publication, on_delete=models.CASCADE)
+
+
+class NewspaperArticle(PublicationStaticAbstract, AuthorEditor):
+    """Articles in a daily, weekly or monthly publication reporting on news and social issues aimed at the public.
+    May entail critical analysis based on expertise in the field. """
+
+###
+    newspaper = models.CharField(max_length=250, null=True, blank=True,
+                                 help_text="The name of the newspaper in which it was published")
+
+    publication = models.ForeignKey(Publication, on_delete=models.CASCADE)
+
+
+class EncyclopediaEntry(PublicationStaticAbstract, AuthorEditor):
+    """Authored entries in a reference work or a compendium focusing on a particular domain or on all branches of
+    knowledge. """
+####
+    name = models.CharField(max_length=250, null=True, blank=True, help_text="")
+    publication_city = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                        help_text="City where the publication was published")
+
+    publication = models.ForeignKey(Publication, on_delete=models.CASCADE)
+
+
+class MagazineEntry(PublicationStaticAbstract, AuthorEditor):
     """Articles in thematic publications published at fixed intervals"""
-    # FIXME: Needs review
+###
+    name = models.CharField(max_length=250, null=True, blank=True,
+                            help_text="The name of the magazine in which it was published")
+
+    publication = models.ForeignKey(Publication, on_delete=models.CASCADE)
 
 
 class DictionaryEntry(PublicationAbstract, AuthorEditor):
@@ -1543,16 +1679,8 @@ class WorkingPaper(PublicationAbstract, AuthorEditor):
     publication = models.ForeignKey(Publication, on_delete=models.CASCADE)
 
 
-class Manual(PublicationAbstract):
+class Manual(PublicationStaticAbstract, AuthorEditor):
     """Course and assignment materials produced for teaching purposes"""
-
-    PUBLISHING_STATUS_CHOICES = (
-        ('Accepted', 'Accepted'),
-        ('In Press', 'In Press'),
-        ('Published', 'Published'),
-        ('Revision Requested', 'Revision Requested'),
-        ('Submitted', 'Submitted')
-    )
 
     published_in = models.CharField(max_length=100, null=True, blank=True,
                                     help_text="The publication in which the manual was published")
@@ -1561,18 +1689,19 @@ class Manual(PublicationAbstract):
     volumes_count = models.IntegerField(null=True, blank=True,
                                         help_text="The total number of volumes contained in the manual")
     pages_count = models.IntegerField(null=True, blank=True, help_text="The total number of pages in the manual")
-    status = models.CharField(max_length=30, null=True, blank=True, choices=PUBLISHING_STATUS_CHOICES,
-                              help_text="The status of the paper with regard to publication")
-    year = models.CharField(max_length=4, null=True, blank=True, help_text="The year relative to the Publishing Status")
-    publisher = models.CharField(max_length=100, null=True, blank=True, help_text="")
-    # location = models
-    # city
+
+    publication_city = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                        help_text="City where the publication was published")
+
+    publication = models.ForeignKey(Publication, on_delete=models.CASCADE)
 
 
-class OnlineResource(PublicationAbstract, AuthorEditor):
+class OnlineResource(PublicationStaticAbstract, AuthorEditor):
     """Information accessible only on the web via traditional technical methods (ie hyperlinks)"""
 
     year_posted = models.CharField(max_length=4, null=True, blank=True, help_text="The year that it was posted online")
+
+    publication = models.ForeignKey(Publication, on_delete=models.CASCADE)
 
 
 class Test(PublicationAbstract, AuthorEditor):
@@ -1598,20 +1727,13 @@ class ClinicalCareGuideline(PublicationAbstract):
     publication = models.ForeignKey(Publication, on_delete=models.CASCADE)
 
 
-class ConferencePublication(PublicationAbstract, AuthorEditor):
+class ConferencePublication(PublicationStaticAbstract, AuthorEditor):
     """Conference publications include Abstracts, Posters and Papers."""
 
     TYPE_CHOICES = (
         ('Abstract', 'Abstract'),
         ('Paper', 'Paper'),
         ('Poster', 'Poster')
-    )
-    STATUS_CHOICES = (
-        ('Accepted', 'Accepted'),
-        ('In Press', 'In Press'),
-        ('Published', 'Published'),
-        ('Revision Requested', 'Revision Requested'),
-        ('Submitted', 'Submitted')
     )
 
     type = models.CharField(max_length=10, null=True, blank=True, choices=TYPE_CHOICES,
@@ -1625,18 +1747,13 @@ class ConferencePublication(PublicationAbstract, AuthorEditor):
     published_in = models.CharField(max_length=100, null=True, blank=True,
                                     help_text="The title of the proceedings publication")
     page_range = models.CharField(max_length=20, null=True, blank=True)
-    status = models.CharField(max_length=30, null=True, blank=True, choices=STATUS_CHOICES,
-                              help_text="The status of the paper with regard to publication")
-    year = models.CharField(max_length=4, null=True, blank=True, help_text="year relative to the Publishing Status")
-    publisher = models.CharField(max_length=100, null=True, blank=True,
-                                 help_text="The name of the publisher of the conference proceedings")
-    publication_location = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
-                                            help_text="The country of publication")
     is_refereed = models.BooleanField(null=True, blank=True, help_text="Indicate whether the document was refereed")
     is_invited = models.BooleanField(null=True, blank=True,
                                      help_text="Indicate whether the author was invited to present at the conference")
 
     publication = models.ForeignKey(Publication, on_delete=models.CASCADE)
+
+########################################################################################################################
 
 
 class ArtisticContribution(Base):
