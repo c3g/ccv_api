@@ -325,8 +325,6 @@ class Command(BaseCommand):
 
         data = parsed_xml['{http://www.cihr-irsc.gc.ca/generic-cv/1.0.0}generic-cv']
 
-        j = 0
-
         for i in data["section"]:
             try:
                 if "section" in i:
@@ -334,7 +332,6 @@ class Command(BaseCommand):
                         i['section'] = [i["section"]]
                     self.final_data[i["label"]] = self.get_response(i["section"])
                 if "field" in i and "section" not in i:
-                    print("2", j)
                     if i["label"] in self.final_data:
                         self.final_data[i["label"]].append(self.get_fields(i["field"]))
                     else:
