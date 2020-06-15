@@ -7,7 +7,7 @@ from django.db import models
 from djangoyearlessdate.models import YearlessDateField
 
 from .constants.db_constants import DEFAULT_COLUMN_LENGTH, NAME_LENGTH_MAX
-
+from .utils import parse_integer
 
 # TODO: Indexing the fields which will be used as filters in searching the CCVs
 
@@ -41,12 +41,8 @@ class OtherOrganization(Base):
 class CanadianCommonCv(Base):
     """Master table which links all entities like Identification, Education, Employment, Contribution, etc."""
 
-    _id = models.CharField(max_length=40, db_index=True, unique=True)
+    _id = models.UUIDField(max_length=40, db_index=True, editable=False, default=uuid.uuid4)
     slug = models.SlugField(help_text="Short label to be used in URL")
-
-    def save(self, *args, **kwargs):
-        self._id = uuid.uuid4().__str__()
-        super().save(*args, **kwargs)
 
 
 class Identification(Base):
@@ -96,7 +92,7 @@ class Identification(Base):
     middle_name = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True)
     previous_family_name = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True)
     previous_first_name = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True)
-    date_of_birth = YearlessDateField()
+    date_of_birth = models.CharField(max_length=5)
     sex = models.CharField(max_length=20, choices=SEX_CHOICES, null=True, blank=True)
     designated_group = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, choices=DESIGNATED_GROUP_CHOICES, null=True,
                                         blank=True, help_text="Group designated by the Employment Equity Act of Canada")
@@ -130,7 +126,7 @@ class LanguageSkill(Base):
     can_understand = models.BooleanField(default=False)
     peer_review = models.BooleanField(null=True, blank=True)
 
-    personal_information = models.ForeignKey(Identification, on_delete=models.DO_NOTHING)
+    personal_information = models.ForeignKey(Identification, on_delete=models.CASCADE)
 
 
 class Address(Base):
@@ -162,7 +158,7 @@ class Address(Base):
     end_date = models.DateField(null=True, blank=True,
                                 help_text="If the given address is temporary, the date upon which it becomes inactive")
 
-    personal_information = models.ForeignKey(Identification, on_delete=models.DO_NOTHING)
+    personal_information = models.ForeignKey(Identification, on_delete=models.CASCADE)
 
 
 class Telephone(Base):
@@ -194,7 +190,7 @@ class Telephone(Base):
     end_date = models.DateField(null=True, blank=True,
                                 help_text="If the given number is temporary, the date upon which it becomes inact")
 
-    personal_information = models.ForeignKey(Identification, on_delete=models.DO_NOTHING)
+    personal_information = models.ForeignKey(Identification, on_delete=models.CASCADE)
 
 
 class Email(Base):
@@ -232,7 +228,7 @@ class Website(Base):
                             help_text="The nature of the given web address")
     url = models.URLField(max_length=100, null=True, blank=True, help_text="The person's web address")
 
-    personal_information = models.ForeignKey(Identification, on_delete=models.DO_NOTHING)
+    personal_information = models.ForeignKey(Identification, on_delete=models.CASCADE)
 
 
 class Education(Base):
@@ -288,7 +284,7 @@ class Degree(Base):
                                         help_text="The institution that conferred the degree.")
     other_organization = models.OneToOneField(OtherOrganization, on_delete=models.CASCADE, null=True, blank=True, )
 
-    education = models.ForeignKey(Education, on_delete=models.DO_NOTHING)
+    education = models.ForeignKey(Education, on_delete=models.CASCADE)
 
 
 class Supervisor(Base):
@@ -299,7 +295,7 @@ class Supervisor(Base):
     start_date = models.DateField(null=True, blank=True, help_text="The date when the supervision started")
     end_date = models.DateField(null=True, blank=True, help_text="The date when the supervision ended")
 
-    degree = models.ForeignKey(Degree, on_delete=models.DO_NOTHING)
+    degree = models.ForeignKey(Degree, on_delete=models.CASCADE)
 
 
 class Credential(Base):
@@ -317,7 +313,7 @@ class Credential(Base):
                                         help_text="The organization that conferred this credential")
     other_organization = models.OneToOneField(OtherOrganization, on_delete=models.CASCADE, null=True, blank=True)
 
-    education = models.ForeignKey(Education, on_delete=models.DO_NOTHING)
+    education = models.ForeignKey(Education, on_delete=models.CASCADE)
 
 
 class Recognition(Base):
@@ -335,15 +331,19 @@ class Recognition(Base):
     end_date = models.DateField(null=True, blank=True, help_text="The date when this recognition expires")
     amount = models.IntegerField(null=True, blank=True, help_text="The amount that was awarded for this recognition")
     amount_in_canadian_dollar = models.IntegerField(null=True, blank=True, help_text="Amount in CAN $")
+    description = models.CharField(max_length=1000, null=True, blank=True,
+                                   help_text="A description of the recognition obtained")
     currency = models.CharField(max_length=50, null=True, blank=True,
                                 help_text="The currency in which the money was awarded")
 
     organization = models.OneToOneField(Organization, on_delete=models.CASCADE, null=True, blank=True,
                                         help_text="The organization that gave the recognition")
     other_organization = models.OneToOneField(OtherOrganization, on_delete=models.CASCADE, null=True, blank=True)
-    ccv = models.OneToOneField(CanadianCommonCv, on_delete=models.CASCADE)
+
+    ccv = models.ForeignKey(CanadianCommonCv, on_delete=models.CASCADE)
 
     def save(self, *args, **kwargs):
+        self.amount = parse_integer(self.amount)
         # TODO: Add amount conversion logic in CAN $
         super().save(*args, **kwargs)
 
@@ -366,7 +366,7 @@ class UserProfile(Base):
     research_interest = models.CharField(max_length=1000, null=True, blank=True)
     experience_summary = models.CharField(max_length=1000, null=True, blank=True,
                                           help_text="summary of research experience")
-    country = ArrayField(models.CharField(max_length=DEFAULT_COLUMN_LENGTH), null=True, blank=True, default=list)
+    # country = ArrayField(models.CharField(max_length=DEFAULT_COLUMN_LENGTH), null=True, blank=True, default=list)
 
     ccv = models.OneToOneField(CanadianCommonCv, on_delete=models.CASCADE)
 
@@ -374,9 +374,15 @@ class UserProfile(Base):
 class ResearchSpecializationKeyword(Base):
     """Keywords that best correspond to the person's expertise in research, creation, instrumentation and techniques"""
 
+    order = models.IntegerField(null=True, blank=True,
+                                help_text="This field is used to order the entries. A value of 1 will show up at top.")
     keyword = models.CharField(max_length=50, null=True, blank=True)
 
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+
+    def save(self, *args, **kwargs):
+        self.order = parse_integer(self.order)
+        super().save(*args, **kwargs)
 
 
 class ResearchCentre(Base):
@@ -584,9 +590,9 @@ class NonAcademicWorkExperience(Base):
     unit_division = models.CharField(max_length=100, null=True, blank=True,
                                      help_text="The department within the given company or organization")
 
-    organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.DO_NOTHING,
+    organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.CASCADE,
                                         help_text="The name of the organization where the person worked")
-    other_organization = models.OneToOneField(OtherOrganization, on_delete=models.DO_NOTHING)
+    other_organization = models.OneToOneField(OtherOrganization, on_delete=models.CASCADE)
     employment = models.ForeignKey(Employment, on_delete=models.CASCADE)
 
 
@@ -604,9 +610,9 @@ class Affiliation(Base):
     end_date = models.DateField(null=True, blank=True,
                                 help_text="The date when the person's affiliation with this organization ended")
 
-    organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.DO_NOTHING,
+    organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.CASCADE,
                                         help_text="The organization with which the person is affiliated.")
-    other_organization = models.OneToOneField(OtherOrganization, null=True, blank=True, on_delete=models.DO_NOTHING)
+    other_organization = models.OneToOneField(OtherOrganization, null=True, blank=True, on_delete=models.CASCADE)
 
     employment = models.ForeignKey(Employment, on_delete=models.CASCADE)
 
@@ -877,10 +883,10 @@ class CommitteeMembership(Base):
                                    help_text="Description of services contributed by the person as part of a committee")
     end_date = models.DateField(null=True, blank=True, help_text="The date on which membership ended, if applicable")
 
-    organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.DO_NOTHING,
+    organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.CASCADE,
                                         help_text="The name of the organisation of which the person is a member")
-    other_organization = models.OneToOneField(OtherOrganization, null=True, blank=True, on_delete=models.DO_NOTHING)
-    membership = models.ForeignKey(Membership, on_delete=models.DO_NOTHING)
+    other_organization = models.OneToOneField(OtherOrganization, null=True, blank=True, on_delete=models.CASCADE)
+    membership = models.ForeignKey(Membership, on_delete=models.CASCADE)
 
 
 class OtherMembership(Base):
@@ -894,10 +900,12 @@ class OtherMembership(Base):
                                    help_text="Description of services contributed by the person as part of a committee")
     end_date = models.DateField(null=True, blank=True, help_text="The date on which membership ended, if applicable")
 
-    organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.DO_NOTHING,
+    organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.CASCADE,
                                         help_text="The name of the organisation of which the person is a member")
-    other_organization = models.OneToOneField(OtherOrganization, null=True, blank=True, on_delete=models.DO_NOTHING)
-    membership = models.ForeignKey(Membership, on_delete=models.DO_NOTHING)
+    other_organization = models.OneToOneField(OtherOrganization, null=True, blank=True, on_delete=models.CASCADE)
+    membership = models.ForeignKey(Membership, on_delete=models.CASCADE)
+
+########################################################################################################################
 
 
 class Activity(Base):
@@ -907,7 +915,17 @@ class Activity(Base):
 
 
 class ActivityAbstract(Base):
-    """"""
+    """Contains the common fields to be inherited in the respective table"""
+
+    ACTIVITY_TYPE_CHOICES = (
+        ('Teaching Activity', 'Teaching Activity'),
+        ('Supervisory Activity', 'Supervisory Activity'),
+        ('Administrative Activity', 'Administrative Activity'),
+        ('Advisory Activity', 'Advisory Activity'),
+        ('Assessment And Review Activity', 'Assessment And Review Activity'),
+        ('Participation Activity', 'Participation Activity'),
+        ('Other Activity', 'Other Activity'),
+    )
 
     start_date = models.DateField(null=True, blank=True, help_text="The date the person began this activity.")
     end_date = models.DateField(null=True, blank=True, help_text="The date the person finished this activity.")
@@ -923,7 +941,7 @@ class TeachingActivity(Base):
     activity = models.OneToOneField(Activity, on_delete=models.CASCADE)
 
 
-class CourseTaught(Base):
+class CourseTaught(ActivityAbstract):
     """Services contributed in the form of courses taught at academic institutions with which the person is
     currently, or has in the past been, affiliated. """
 
@@ -959,8 +977,6 @@ class CourseTaught(Base):
     students_count = models.IntegerField(null=True, blank=True,
                                          help_text="The number of students who attend this course during a session")
     credits_count = models.IntegerField(null=True, blank=True, help_text="Institution’s credit value for the course")
-    start_date = models.DateField(null=True, blank=True, help_text="The date the person began teaching this course.")
-    end_date = models.DateField(null=True, blank=True, help_text="The date the person finished teaching this course.")
     lecture_hours_per_week = models.IntegerField(null=True, blank=True, help_text="The number of hours of lecture the "
                                                                                   "person contributed per week")
     tutorial_hours_per_week = models.IntegerField(null=True, blank=True, help_text="The number of hours of tutorial "
@@ -971,9 +987,9 @@ class CourseTaught(Base):
     guest_lecture = models.CharField(max_length=5, null=True, blank=True, choices=BOOLEAN_CHOICES,
                                      help_text="Indicate whether you were a guest lecturer for this course")
 
-    organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.DO_NOTHING,
+    organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.CASCADE,
                                         help_text="The organization where the course was taught ")
-    other_organization = models.OneToOneField(OtherOrganization, null=True, blank=True, on_delete=models.DO_NOTHING)
+    other_organization = models.OneToOneField(OtherOrganization, null=True, blank=True, on_delete=models.CASCADE)
     teaching_activity = models.ForeignKey(TeachingActivity, on_delete=models.CASCADE)
 
 
@@ -985,7 +1001,7 @@ class CoInstructor(Base):
     first_name = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
                                   help_text="The first name of the instructor")
 
-    course_taught = models.ForeignKey(CourseTaught, on_delete=models.DO_NOTHING)
+    course_taught = models.ForeignKey(CourseTaught, on_delete=models.CASCADE)
 
 
 class CourseDevelopment(Base):
@@ -1006,17 +1022,99 @@ class CoDeveloper(Base):
     first_name = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
                                   help_text="First name of person who participated in the development of the course")
 
-    course_development = models.ForeignKey(CourseDevelopment, on_delete=models.DO_NOTHING, null=True, blank=True)
+    course_development = models.ForeignKey(CourseDevelopment, on_delete=models.CASCADE, null=True, blank=True)
 
-    # program_development = models.ForeignKey(CourseDevelopment, on_delete=models.DO_NOTHING, null=True, blank=True)
+    # program_development = models.ForeignKey(CourseDevelopment, on_delete=models.CASCADE, null=True, blank=True)
 
 
 class SupervisoryActivity(Base):
-    """"""
+    """Services contributed in instances of overseeing the productivity and progress of students and employees"""
+
+    activity = models.OneToOneField(Activity, on_delete=models.CASCADE)
 
 
 class StudentSupervision(Base):
-    """"""
+    """Contribution to the productivity and progress, usually for academic credit, of directly supervised students,
+    postdocs or research associates. """
+
+    ROLE_CHOICES = (
+        ('Academic Advisor', 'Academic Advisor'),
+        ('Co-Supervisor', 'Co-Supervisor'),
+        ('Principal Supervisor', 'Principal Supervisor')
+    )
+    RESIDENCY_STATUS_CHOICES = (
+        ('Canadian Citizen', 'Canadian Citizen'),
+        ('Not Applicable', 'Not Applicable'),
+        ('Permanent Resident', 'Permanent Resident'),
+        ('Refugee', 'Refugee'),
+        ('Student Work Permit', 'Student Work Permit'),
+        ('Study Permit', 'Study Permit'),
+        ('Visitor Visa', 'Visitor Visa'),
+        ('Work Permit', 'Work Permit')
+    )
+    DEGREE_TYPE_CHOICES = (
+        ('Bachelor’s', 'Bachelor’s'),
+        ('Bachelor’s Equivalent', 'Bachelor’s Equivalent'),
+        ('Bachelor’s Honours', 'Bachelor’s Honours'),
+        ('Master’s Equivalent', 'Master’s Equivalent'),
+        ('Master’s non-Thesis', 'Master’s non-Thesis'),
+        ('Master’s Thesis', 'Master’s Thesis'),
+        ('Doctorate', 'Doctorate'),
+        ('Doctorate Equivalent', 'Doctorate Equivalent'),
+        ('Post-doctorate', 'Post-doctorate'),
+        ('Certificate', 'Certificate'),
+        ('Diploma', 'Diploma'),
+        ('Habilitation', 'Habilitation'),
+        ('Research Associate', 'Research Associate'),
+        ('Technician', 'Technician')
+    )
+    DEGREE_STATUS_CHOICES = (
+        ('All But Degree', 'All But Degree'),
+        ('Completed', 'Completed'),
+        ('In Progress', 'In Progress'),
+        ('Withdrawn', 'Withdrawn')
+    )
+
+
+class StudentCountryOfCitizenShip(Base):
+    """The countries of citizenship of the student"""
+
+    country_name = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                    help_text="Country of citizenship of the student")
+
+    student_supervision = models.ForeignKey(StudentSupervision, on_delete=models.CASCADE)
+
+
+class StudentRecognition(Base):
+    """Recognitions obtained by the student. Recognitions are any acknowledgments, appreciations and monetary rewards
+    that were obtained and which were not directly related to your research funding. """
+
+    TYPE_CHOICES = (
+        ('Citation', 'Citation'),
+        ('Distinction', 'Distinction'),
+        ('Honor', 'Honor'),
+        ('Prize / Award', 'Prize / Award')
+    )
+
+    type = models.CharField(max_length=20, null=True, blank=True, help_text="")
+    name = models.CharField(max_length=250, null=True, blank=True, help_text="The name or title of the recognition")
+    year_started = models.CharField(max_length=4, null=True, blank=True,
+                                    help_text="The year when the recognition was awarded or took effect")
+    year_completed = models.CharField(max_length=4, null=True, blank=True,
+                                      help_text="The year when this recognition expires")
+    amount = models.IntegerField(null=True, blank=True, help_text="The amount that was awarded for this recognition")
+    currency = models.CharField(max_length=10, null=True, blank=True,
+                                help_text="The currency in which the money was awarded")
+
+    organisation = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                    help_text="The organization that gave the recognition")
+    other_organization = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                          help_text="If someone cannot find the org from the list")
+
+    student_supervision = models.ForeignKey(StudentSupervision, on_delete=models.CASCADE)
+
+
+
 
 
 class AdministrativeActivity(Base):
@@ -1105,9 +1203,9 @@ class GraduationExaminationActivity(ActivityAbstract):
                                   help_text="The department within the given institution")
     student_name = models.CharField(max_length=100, null=True, blank=True,
                                     help_text="The family and first name of the student")
-    organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.DO_NOTHING,
+    organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.CASCADE,
                                         help_text="The institution for which the examination was conducted.")
-    other_organization = models.OneToOneField(OtherOrganization, null=True, blank=True, on_delete=models.DO_NOTHING)
+    other_organization = models.OneToOneField(OtherOrganization, null=True, blank=True, on_delete=models.CASCADE)
 
     assessment_review_activity = models.ForeignKey(AssessmentAndReviewActivity, on_delete=models.CASCADE)
 
@@ -1148,9 +1246,9 @@ class ResearchFundingApplicationAssessmentActivity(ActivityAbstract):
                                                       "scholarship")
     applications_assessed_count = models.IntegerField(null=True, blank=True,
                                                       help_text="The number of applications that the person assessed")
-    organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.DO_NOTHING,
+    organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.CASCADE,
                                         help_text="The organization for which the assessment was made")
-    other_organization = models.OneToOneField(OtherOrganization, null=True, blank=True, on_delete=models.DO_NOTHING)
+    other_organization = models.OneToOneField(OtherOrganization, null=True, blank=True, on_delete=models.CASCADE)
 
     assessment_review_activity = models.ForeignKey(AssessmentAndReviewActivity, on_delete=models.CASCADE)
 
@@ -1171,9 +1269,9 @@ class PromotionTenureAssessmentActivity(ActivityAbstract):
                                              "with the consideration of an application for promotion/tenure, "
                                              "to examine something, formulate a judgement, and a statement of that "
                                              "judgement.")
-    organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.DO_NOTHING,
+    organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.CASCADE,
                                         help_text="The organization for which the assessment was made")
-    other_organization = models.OneToOneField(OtherOrganization, null=True, blank=True, on_delete=models.DO_NOTHING)
+    other_organization = models.OneToOneField(OtherOrganization, null=True, blank=True, on_delete=models.CASCADE)
 
     assessment_review_activity = models.ForeignKey(AssessmentAndReviewActivity, on_delete=models.CASCADE)
 
@@ -1189,9 +1287,9 @@ class OrganizationalReviewActivity(ActivityAbstract):
                                              "with the consideration of an application for promotion/tenure, "
                                              "to examine something, formulate a judgement, and a statement of that "
                                              "judgement.")
-    organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.DO_NOTHING,
+    organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.CASCADE,
                                         help_text="The organization for which the assessment was made")
-    other_organization = models.OneToOneField(OtherOrganization, null=True, blank=True, on_delete=models.DO_NOTHING)
+    other_organization = models.OneToOneField(OtherOrganization, null=True, blank=True, on_delete=models.CASCADE)
 
     assessment_review_activity = models.ForeignKey(AssessmentAndReviewActivity, on_delete=models.CASCADE)
 
@@ -1199,10 +1297,10 @@ class OrganizationalReviewActivity(ActivityAbstract):
 class ParticipationActivity(Base):
     """Services contributed in participating in an activity"""
 
-    activity = models.OneToOneField(Activity, on_delete=models.DO_NOTHING)
+    activity = models.OneToOneField(Activity, on_delete=models.CASCADE)
 
 
-class EventActivity(Base):
+class EventActivity(ActivityAbstract):
     """Services contributed in taking part in an event"""
 
     TYPE_CHOICES = (
@@ -1218,8 +1316,6 @@ class EventActivity(Base):
     type = models.CharField(max_length=20, null=True, blank=True, choices=TYPE_CHOICES,
                             help_text="The nature of the event")
     name = models.CharField(max_length=250, null=True, blank=True, help_text="The title or name of the event")
-    start_date = models.DateField(null=True, blank=True, help_text="The date the person started the activity")
-    end_date = models.DateField(null=True, blank=True, help_text="The date the person completed this activity")
     event_start_date = models.DateField(null=True, blank=True, help_text="The date the event started")
     event_end_date = models.DateField(null=True, blank=True, help_text="The date the event ended")
     description = models.CharField(max_length=1000, null=True, blank=True,
@@ -1237,9 +1333,9 @@ class CommunityAndVolunteerActivity(ActivityAbstract):
     description = models.CharField(max_length=1000, null=True, blank=True,
                                    help_text="Description of the unpaid services")
 
-    organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.DO_NOTHING,
+    organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.CASCADE,
                                         help_text="The name of the organization for which the service was undertaken")
-    other_organization = models.OneToOneField(OtherOrganization, null=True, blank=True, on_delete=models.DO_NOTHING)
+    other_organization = models.OneToOneField(OtherOrganization, null=True, blank=True, on_delete=models.CASCADE)
     participation_activity = models.ForeignKey(ParticipationActivity, on_delete=models.CASCADE)
 
 
@@ -1253,9 +1349,11 @@ class KnowledgeTranslation(ActivityAbstract):
                                                       help_text="")
     # evidence_of_uptake = models.CharField(max_length=1000, ?he)
     reference_or_citation = models.CharField(max_length=1000, null=True, blank=True,
-                                             help_text="Provide references, citations or websites demonstrating the uptake of your research findings")
+                                             help_text="Provide references, citations or websites demonstrating the "
+                                                       "uptake of your research findings")
     activity_description = models.CharField(max_length=1000, null=True, blank=True,
-                                            help_text="Description of services the person contributed to knowledge translation")
+                                            help_text="Description of services the person contributed to knowledge "
+                                                      "translation")
 
 
 class InternationalCollaborationActivity(ActivityAbstract):
@@ -1761,7 +1859,7 @@ class ArtisticContribution(Base):
     performance outputs resulting from, or related to, the person's research or scholarly activities. Works may be
     produced alone or collaboratively as a creative practice that lead to production and dissemination. """
 
-    contribution = models.OneToOneField(Contribution, on_delete=models.DO_NOTHING)
+    contribution = models.OneToOneField(Contribution, on_delete=models.CASCADE)
 
 
 class ArtisticContributionAbstract(ContributionAbstract):
@@ -2000,7 +2098,7 @@ class MajorPerformanceDate(Base):
 
     date = models.DateField(null=True, blank=True, help_text="The date that performance was given")
 
-    choreography = models.ForeignKey(Choreography, on_delete=models.DO_NOTHING)
+    choreography = models.ForeignKey(Choreography, on_delete=models.CASCADE)
 
 
 class MuseumExhibition(ArtisticContributionAbstract):
@@ -2031,7 +2129,7 @@ class PerformanceDate(Base):
 
     date = models.DateField(null=True, blank=True, help_text="The date of a major performance")
 
-    performance_art = models.ForeignKey(PerformanceArt, on_delete=models.DO_NOTHING)
+    performance_art = models.ForeignKey(PerformanceArt, on_delete=models.CASCADE)
 
 
 class Poetry(ArtisticContributionAbstract):
@@ -2073,7 +2171,7 @@ class IntellectualProperty(Base):
     """Collection of information records that, in combination, represent a full and up-to-date history of the
     intellectual property owned by the person and resulting from, or related to, the person's research activities. """
 
-    contribution = models.OneToOneField(Contribution, on_delete=models.DO_NOTHING)
+    contribution = models.OneToOneField(Contribution, on_delete=models.CASCADE)
 
 
 class IntellectualPropertyAbstract(ContributionAbstract):
@@ -2180,19 +2278,29 @@ class ResearchDiscipline(Base):
     institutionalized as a unit, like a department or a faculty. It can describe both the training of the researcher
     and the research projects. """
 
-    discipline = models.CharField(max_length=50, null=True, blank=True)
-    sector_of_discipline = models.CharField(max_length=50, null=True, blank=True)
-    field = models.CharField(max_length=50, null=True, blank=True)
+    discipline = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True)
+    sector_of_discipline = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True)
+    field = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True)
+    order = models.IntegerField(null=True, blank=True,
+                                help_text="This field is used to order the entries. A value of 1 will show up at top.")
 
     degree = models.ForeignKey(Degree, null=True, blank=True, on_delete=models.CASCADE)
     credential = models.ForeignKey(Credential, null=True, blank=True, on_delete=models.CASCADE)
     recognition = models.ForeignKey(Recognition, null=True, blank=True, on_delete=models.CASCADE)
-    research_funding_history = models.ForeignKey(ResearchFundingHistory, on_delete=models.CASCADE)
-    academic_work_experience = models.ForeignKey(AcademicWorkExperience, on_delete=models.CASCADE)
-    non_academic_work_experience = models.ForeignKey(NonAcademicWorkExperience, on_delete=models.CASCADE)
-    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+    research_funding_history = models.ForeignKey(ResearchFundingHistory, null=True, blank=True,
+                                                 on_delete=models.CASCADE)
+    academic_work_experience = models.ForeignKey(AcademicWorkExperience, null=True, blank=True,
+                                                 on_delete=models.CASCADE)
+    non_academic_work_experience = models.ForeignKey(NonAcademicWorkExperience, null=True, blank=True,
+                                                     on_delete=models.CASCADE)
+    user_profile = models.ForeignKey(UserProfile, null=True, blank=True,
+                                     on_delete=models.CASCADE)
     research_funding_assessment_activity = models.ForeignKey(ResearchFundingApplicationAssessmentActivity,
-                                                             on_delete=models.CASCADE)
+                                                             null=True, blank=True, on_delete=models.CASCADE)
+
+    def save(self, *args, **kwargs):
+        self.order = parse_integer(self.order)
+        super().save(*args, **kwargs)
 
 
 class AreaOfResearch(Base):
@@ -2202,33 +2310,53 @@ class AreaOfResearch(Base):
 
     area = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True)
     sector = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True)
-    field = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True)
+    field = models.CharField(max_length=NAME_LENGTH_MAX, null=True, blank=True)
     subfield = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True)
+    order = models.IntegerField(null=True, blank=True,
+                                help_text="This field is used to order the entries. A value of 1 will show up at top.")
 
     degree = models.ForeignKey(Degree, null=True, blank=True, on_delete=models.CASCADE)
     credential = models.ForeignKey(Credential, null=True, blank=True, on_delete=models.CASCADE)
     recognition = models.ForeignKey(Recognition, null=True, blank=True, on_delete=models.CASCADE)
-    research_funding_history = models.ForeignKey(ResearchFundingHistory, on_delete=models.CASCADE)
-    academic_work_experience = models.ForeignKey(AcademicWorkExperience, on_delete=models.CASCADE)
-    non_academic_work_experience = models.ForeignKey(NonAcademicWorkExperience, on_delete=models.CASCADE)
-    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+    research_funding_history = models.ForeignKey(ResearchFundingHistory, null=True, blank=True,
+                                                 on_delete=models.CASCADE)
+    academic_work_experience = models.ForeignKey(AcademicWorkExperience, null=True, blank=True,
+                                                 on_delete=models.CASCADE)
+    non_academic_work_experience = models.ForeignKey(NonAcademicWorkExperience, null=True, blank=True,
+                                                     on_delete=models.CASCADE)
+    user_profile = models.ForeignKey(UserProfile, null=True, blank=True,
+                                     on_delete=models.CASCADE)
     research_funding_assessment_activity = models.ForeignKey(ResearchFundingApplicationAssessmentActivity,
-                                                             on_delete=models.CASCADE)
+                                                             null=True, blank=True, on_delete=models.CASCADE)
+
+    def save(self, *args, **kwargs):
+        self.order = parse_integer(self.order)
+        super().save(*args, **kwargs)
 
 
 class FieldOfApplication(Base):
     """The field of application is the scientific, social, economic, cultural, or political area where the research
     can be applied, most of the time to help resolve a problem. """
 
-    field = models.CharField(max_length=50, null=True, blank=True)
-    subfield = models.CharField(max_length=50, null=True, blank=True)
+    field = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True)
+    subfield = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True)
+    order = models.IntegerField(null=True, blank=True,
+                                help_text="This field is used to order the entries. A value of 1 will show up at top.")
 
     degree = models.ForeignKey(Degree, null=True, blank=True, on_delete=models.CASCADE)
     credential = models.ForeignKey(Credential, null=True, blank=True, on_delete=models.CASCADE)
     recognition = models.ForeignKey(Recognition, null=True, blank=True, on_delete=models.CASCADE)
-    research_funding_history = models.ForeignKey(ResearchFundingHistory, on_delete=models.CASCADE)
-    academic_work_experience = models.ForeignKey(AcademicWorkExperience, on_delete=models.CASCADE)
-    non_academic_work_experience = models.ForeignKey(NonAcademicWorkExperience, on_delete=models.CASCADE)
-    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+    research_funding_history = models.ForeignKey(ResearchFundingHistory, null=True, blank=True,
+                                                 on_delete=models.CASCADE)
+    academic_work_experience = models.ForeignKey(AcademicWorkExperience, null=True, blank=True,
+                                                 on_delete=models.CASCADE)
+    non_academic_work_experience = models.ForeignKey(NonAcademicWorkExperience, null=True, blank=True,
+                                                     on_delete=models.CASCADE)
+    user_profile = models.ForeignKey(UserProfile, null=True, blank=True,
+                                     on_delete=models.CASCADE)
     research_funding_assessment_activity = models.ForeignKey(ResearchFundingApplicationAssessmentActivity,
-                                                             on_delete=models.CASCADE)
+                                                             null=True, blank=True, on_delete=models.CASCADE)
+
+    def save(self, *args, **kwargs):
+        self.order = parse_integer(self.order)
+        super().save(*args, **kwargs)
