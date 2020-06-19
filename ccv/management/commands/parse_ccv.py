@@ -84,7 +84,7 @@ class Command(BaseCommand):
 
         # identification
 
-        for i in self.final_data["Personal Information"]["Identification"]:
+        for i in self.final_data["Personal Information"][0]["Identification"]:
             self.identification = Identification(
                 title=i["Title"],
                 family_name=i["Family Name"],
@@ -107,7 +107,7 @@ class Command(BaseCommand):
 
         # language skills
 
-        for i in self.final_data["Personal Information"]["Language Skills"]:
+        for i in self.final_data["Personal Information"][0]["Language Skills"]:
             LanguageSkill(
                 language=i["Language"],
                 can_read=self.parse_boolean(i["Read"]),
@@ -120,7 +120,7 @@ class Command(BaseCommand):
 
         # address
 
-        for i in self.final_data["Personal Information"]["Address"]:
+        for i in self.final_data["Personal Information"][0]["Address"]:
             Address(
                 type=i["Address Type"],
                 line_1=i["Address - Line 1"],
@@ -140,7 +140,7 @@ class Command(BaseCommand):
         # # telephone
         #
 
-        for i in self.final_data["Personal Information"]["Telephone"]:
+        for i in self.final_data["Personal Information"][0]["Telephone"]:
             Telephone(
                 phone_type=i["Phone Type"],
                 country_code=i["Country Code"],
@@ -154,7 +154,7 @@ class Command(BaseCommand):
 
         # email
 
-        for i in self.final_data["Personal Information"]["Email"]:
+        for i in self.final_data["Personal Information"][0]["Email"]:
             Email(
                 type=i["Email Type"],
                 address=i["Email Address"],
@@ -164,7 +164,7 @@ class Command(BaseCommand):
             ).save()
 
         # website
-        for i in self.final_data["Personal Information"]["Website"]:
+        for i in self.final_data["Personal Information"][0]["Website"]:
             Website(
                 type=i["Website Type"],
                 url=i["URL"],
@@ -178,7 +178,7 @@ class Command(BaseCommand):
 
         # degree
 
-        for i in self.final_data["Education"]["Degrees"]:
+        for i in self.final_data["Education"][0]["Degrees"]:
             degree = Degree(
                 type=i["Degree Type"],
                 name=i["Degree Name"],
@@ -201,7 +201,7 @@ class Command(BaseCommand):
                     degree=degree
                 ).save()
 
-        for credential in self.final_data["Education"]["Credentials"]:
+        for credential in self.final_data["Education"][0]["Credentials"]:
             Credential(
                 title=credential["Title"],
                 effective_date=self.parse_datetime(credential["Effective Date"], "%Y/%m"),
@@ -211,12 +211,12 @@ class Command(BaseCommand):
             )
 
         # recognitions
-        self.stdout.write(f"----------{self.final_data.get('Recognitions')}")
-
-        self.final_data["Recognitions"] = [self.final_data.get("Recognitions")]
+        # self.stdout.write(f"----------{self.final_data.get('Recognitions')}")
+        #
+        # self.final_data["Recognitions"] = [self.final_data.get("Recognitions")]
 
         for recognition in self.final_data.get("Recognitions", []):
-            self.stdout.write(f"----------{recognition}")
+            # self.stdout.write(f"----------{recognition}")
             Recognition(
                 type=recognition["Recognition Type"],
                 name=recognition["Recognition Name"],
@@ -229,28 +229,28 @@ class Command(BaseCommand):
             ).save()
 
         user_profile = UserProfile(
-            researcher_status=self.final_data["User Profile"]["Researcher Status"],
-            career_start_date=self.parse_datetime(self.final_data["User Profile"]["Research Career Start Date"],
+            researcher_status=self.final_data["User Profile"][0]["Researcher Status"],
+            career_start_date=self.parse_datetime(self.final_data["User Profile"][0]["Research Career Start Date"],
                                                   "%Y-%m-%d"),
             engaged_in_clinical_research=self.parse_boolean(
-                self.final_data["User Profile"]["Engaged in Clinical Research?"]),
-            key_theory=self.final_data["User Profile"]["Key Theory / Methodology"],
-            research_interest=self.final_data["User Profile"]["Research Interests"],
-            experience_summary=self.final_data["User Profile"]["Research Experience Summary"],
+                self.final_data["User Profile"][0]["Engaged in Clinical Research?"]),
+            key_theory=self.final_data["User Profile"][0]["Key Theory / Methodology"],
+            research_interest=self.final_data["User Profile"][0]["Research Interests"],
+            experience_summary=self.final_data["User Profile"][0]["Research Experience Summary"],
             # country=self.final_data["User Profile"][""],
             ccv=ccv
         )
         user_profile.save()
 
         for research_specialization_keyword in \
-                self.final_data["User Profile"].get("Research Specialization Keywords", []):
+                self.final_data["User Profile"][0].get("Research Specialization Keywords", []):
             ResearchSpecializationKeyword(
                 keyword=research_specialization_keyword["Research Specialization Keywords"],
                 order=research_specialization_keyword["Order"],
                 user_profile=user_profile
             ).save()
 
-        for research_centre in self.final_data["User Profile"].get("Research Centres", []):
+        for research_centre in self.final_data["User Profile"][0].get("Research Centres", []):
 
             research_centre = research_centre["Research Centre"]["Research Centre"]
 
@@ -261,7 +261,7 @@ class Command(BaseCommand):
                 user_profile=user_profile
             ).save()
 
-        for discipline in self.final_data["User Profile"]["Disciplines Trained In"]:
+        for discipline in self.final_data["User Profile"][0]["Disciplines Trained In"]:
 
             DisciplineTrainedIn(
                 # order=discipline["Order"]
@@ -271,7 +271,7 @@ class Command(BaseCommand):
                 user_profile=user_profile
             ).save()
 
-        for research_discipline in self.final_data["User Profile"]["Research Disciplines"]:
+        for research_discipline in self.final_data["User Profile"][0]["Research Disciplines"]:
 
             ResearchDiscipline(
                 order=research_discipline["Order"],
@@ -281,7 +281,7 @@ class Command(BaseCommand):
                 user_profile=user_profile
             ).save()
 
-        for area in self.final_data["User Profile"]["Areas of Research"]:
+        for area in self.final_data["User Profile"][0]["Areas of Research"]:
 
             AreaOfResearch(
                 order=area["Order"],
@@ -292,7 +292,7 @@ class Command(BaseCommand):
                 user_profile=user_profile
             ).save()
 
-        for application in self.final_data["User Profile"]["Fields of Application"]:
+        for application in self.final_data["User Profile"][0]["Fields of Application"]:
 
             FieldOfApplication(
                 order=application["Order"],
@@ -322,13 +322,6 @@ class Command(BaseCommand):
 
         data = parsed_xml['{http://www.cihr-irsc.gc.ca/generic-cv/1.0.0}generic-cv']
 
-        self.final_data = self.get_response(data)
-
-        import json
-        json_data = json.dumps(self.final_data['ccv'], indent=4)
-
-        with open("outputt.json", "w") as json_file:
-            json_file.write(json_data)
-            json_file.close()
+        self.final_data = self.get_response(data)['ccv']
 
         self.save_to_db()
