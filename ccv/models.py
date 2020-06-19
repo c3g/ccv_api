@@ -1372,6 +1372,22 @@ class InternationalCollaborationActivity(ActivityAbstract):
 ########################################################################################################################
 
 
+class MostSignificantContribution(Base):
+    """Information regarding your most significant contributions as they relate to the application"""
+
+    title = models.CharField(max_length=250, null=True, blank=True,
+                             help_text="A title, name, or short description of the contribution")
+    contribution_date = models.DateField(null=True, blank=True,
+                                         help_text="The key date associated with this contribution (e.g. publication "
+                                                   "date, activity start date, etc.)")
+    description = models.CharField(max_length=1000, null=True, blank=True,
+                                   help_text="Provide a concise description of this contribution, its value to the "
+                                             "area of research fr which u are applying for funding & potential impact")
+
+    ccv = models.ForeignKey(CanadianCommonCv, on_delete=models.CASCADE)
+
+
+
 class Contribution(Base):
     """The things you have done as part of your career"""
 
