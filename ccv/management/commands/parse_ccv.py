@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import json
-import uuid
 import datetime
 import xml.etree.ElementTree as ET
 
@@ -18,7 +16,6 @@ from ccv.utils import etree_to_dict
 
 class Command(BaseCommand):
     help = ''
-
     final_data = {}
 
     def add_arguments(self, parser):
@@ -26,6 +23,7 @@ class Command(BaseCommand):
 
     def get_fields(self, fields: list) -> dict:
         """
+        Function to resolve fields
         :param fields:
         :return:
         """
@@ -43,42 +41,39 @@ class Command(BaseCommand):
                 all_fields[field.get('label')] = ''
         return all_fields
 
-    def get_response(self, sections: list) -> dict:
+    def get_response(self, section: dict) -> dict:
         """
-        :param sections:
+        Recursive function handle the nested structure
+        :param section:
         :return:
         """
 
-        response = {}
-        for section in sections:
-            if 'field' in section:
-                if not isinstance(section.get('field'), list):
-                    section['field'] = [section.get('field')]
+        label = section.get('label')
+        if label is None:
+            label = 'ccv'
+        resp = {label: {}}
 
-                if section.get('label') in response:
-                    response[section.get('label')].append(self.get_fields(section.get('field')))
-                else:
-                    response[section.get('label')] = [self.get_fields(section.get('field'))]
+        if 'field' in section:
+            if not isinstance(section.get('field'), list):
+                section['field'] = [section.get('field')]
+            resp[label] = self.get_fields(section['field'])
 
-            if 'section' in section:
-                if isinstance(section['section'], dict):
-                    section['section'] = [section['section']]
-                for _section in section["section"]:
-                    if "field" in _section:
-                        if not isinstance(_section.get('field'), list):
-                            _section['field'] = [_section.get('field')]
-                        if _section.get('label') in response[section.get('label')][0]:
-                            response[section.get('label')][0][_section.get('label')].append(
-                                self.get_fields(_section.get('field')))
-                        else:
-                            response[section.get('label')][0][_section.get('label')] = [
-                                self.get_fields(_section.get('field'))]
-        return response
+        if 'section' in section:
+            if not isinstance(section.get('section'), list):
+                section['section'] = [section.get('section')]
 
-    def parse_boolean(self, value):
+            for sec in section['section']:
+                res = self.get_response(sec)
+                if sec['label'] not in resp[label]:
+                    resp[label][sec['label']] = []
+                resp[label][sec['label']].append(res[sec['label']])
+
+        return resp
+
+    def parse_boolean(self, value: str) -> bool:
         return True if value == "Yes" else False
 
-    def parse_datetime(self, date, format):
+    def parse_datetime(self, date, format: str):
         return datetime.datetime.strptime(date, format) if date else None
 
     def save_to_db(self):
@@ -177,6 +172,7 @@ class Command(BaseCommand):
             ).save()
 
         # education
+
         self.education = Education(ccv=ccv)
         self.education.save()
 
@@ -310,6 +306,7 @@ class Command(BaseCommand):
         # for i in self.final_data["Education"][""]
 
     def handle(self, *args, **options):
+
         if "ccv_xml_filepath" not in options:
             raise CommandError("XML file path is not provided")
 
@@ -325,23 +322,13 @@ class Command(BaseCommand):
 
         data = parsed_xml['{http://www.cihr-irsc.gc.ca/generic-cv/1.0.0}generic-cv']
 
-        for i in data["section"]:
-            try:
-                if "section" in i:
-                    if isinstance(i["section"], dict):
-                        i['section'] = [i["section"]]
-                    self.final_data[i["label"]] = self.get_response(i["section"])
-                if "field" in i and "section" not in i:
-                    if i["label"] in self.final_data:
-                        self.final_data[i["label"]].append(self.get_fields(i["field"]))
-                    else:
-                        self.final_data[i["label"]] = [self.get_fields(i["field"])]
-                if "field" in i and "section" in i:
-                    extra_fields = self.get_fields(i["field"])
-                    self.final_data[i['label']] = {**self.final_data[i['label']], **extra_fields}
+        self.final_data = self.get_response(data)
 
-            except Exception as e:
-                import traceback
-                print(traceback.print_exc())
+        import json
+        json_data = json.dumps(self.final_data['ccv'], indent=4)
+
+        with open("outputt.json", "w") as json_file:
+            json_file.write(json_data)
+            json_file.close()
 
         self.save_to_db()
