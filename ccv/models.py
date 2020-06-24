@@ -2,9 +2,7 @@
 
 import uuid
 
-from django.contrib.postgres.fields import ArrayField
 from django.db import models
-from djangoyearlessdate.models import YearlessDateField
 
 from .constants.db_constants import DEFAULT_COLUMN_LENGTH, NAME_LENGTH_MAX
 from .utils import parse_integer
@@ -592,7 +590,7 @@ class NonAcademicWorkExperience(Base):
 
     organization = models.OneToOneField(Organization, null=True, blank=True, on_delete=models.CASCADE,
                                         help_text="The name of the organization where the person worked")
-    other_organization = models.OneToOneField(OtherOrganization, on_delete=models.CASCADE)
+    other_organization = models.OneToOneField(OtherOrganization, on_delete=models.CASCADE, null=True, blank=True)
     employment = models.ForeignKey(Employment, on_delete=models.CASCADE)
 
 
@@ -709,7 +707,7 @@ class ResearchFundingHistory(Base):
     research_uptake = models.CharField(max_length=1000, null=True, blank=True,
                                        help_text="strategies used to promote the uptake of your research findings.")
 
-    ccv = models.OneToOneField(CanadianCommonCv, on_delete=models.CASCADE)
+    ccv = models.ForeignKey(CanadianCommonCv, on_delete=models.CASCADE)
 
 
 class ResearchUptakeHolder(Base):
@@ -764,7 +762,7 @@ class FundingSource(Base):
         ('No', 'No')
     )
 
-    organization = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+    organization = models.CharField(max_length=100, null=True, blank=True,
                                     help_text="Organization that provided funding for this project")
     other_organization = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
                                           help_text="The funding organization's name, only if not in the above column")
@@ -893,7 +891,7 @@ class OtherMembership(Base):
     """Services contributed as part of a scholarly society or other organization to perform services not directly
     related to the person's research activities """
 
-    role = models.CharField(max_length=20, null=True, blank=True, help_text="The person's role in this activity")
+    role = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True, help_text="The person's role in this activity")
     name = models.CharField(max_length=250, null=True, blank=True, help_text="The name of the committee")
     start_date = models.DateField(null=True, blank=True, help_text="The date on which membership began")
     description = models.CharField(max_length=1000, null=True, blank=True,
@@ -1387,7 +1385,6 @@ class MostSignificantContribution(Base):
     ccv = models.ForeignKey(CanadianCommonCv, on_delete=models.CASCADE)
 
 
-
 class Contribution(Base):
     """The things you have done as part of your career"""
 
@@ -1402,12 +1399,12 @@ class ContributionFundingSource(Base):
     other_organization = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
                                           help_text="If someone cannot find the org from the list")
     reference_number = models.CharField(max_length=20, null=True, blank=True,
-                                        help_text="reference number for the funds received")
+                              help_text="reference number for the funds received")
 
 
 class ContributionAbstract(Base):
 
-    funding_source = models.ManyToManyField(FundingSource, related_name="%(app_label)s_%(class)s_related",
+    funding_source = models.ManyToManyField(ContributionFundingSource, related_name="%(app_label)s_%(class)s_related",
                                             related_query_name="%(app_label)s_%(class)ss")
 
     class Meta:
@@ -1452,7 +1449,7 @@ class Presentation(ContributionAbstract):
     contribution = models.ForeignKey(Contribution, on_delete=models.CASCADE)
 
 
-class InterviewAndMediumRelation(ContributionAbstract):
+class InterviewAndMediaRelation(ContributionAbstract):
     """Services contributed in the form of interview(s) with the person with a member of the broadcast (TV or radio)
     media. """
 
@@ -1467,7 +1464,7 @@ class InterviewAndMediumRelation(ContributionAbstract):
         abstract = True
 
 
-class BroadcastInterview(InterviewAndMediumRelation):
+class BroadcastInterview(InterviewAndMediaRelation):
     """Services contributed in the form of interview(s) with the person with a member of the broadcast (TV or radio)
     media. """
 
@@ -1481,7 +1478,7 @@ class BroadcastInterview(InterviewAndMediumRelation):
     contribution = models.ForeignKey(Contribution, on_delete=models.CASCADE)
 
 
-class TextInterview(InterviewAndMediumRelation):
+class TextInterview(InterviewAndMediaRelation):
     """Services contributed in the form of interview(s) with the person with a member of the print or online media"""
 
     forum = models.CharField(max_length=250, null=True, blank=True,
@@ -1578,12 +1575,22 @@ class Journal(PublicationAbstract, AuthorEditor):
         ('Article', 'Article')
     )
 
+    STATUS_CHOICES = (
+        ('Accepted', 'Accepted'),
+        ('In Press', 'In Press'),
+        ('Published', 'Published'),
+        ('Revision Requested', 'Revision Requested'),
+        ('Submitted', 'Submitted')
+    )
+
     journal = models.CharField(max_length=200, null=True, blank=True,
                                help_text="The name of the journal in which the article is published, or to be published")
     volume = models.CharField(max_length=20, null=True, blank=True, help_text="The volume number of the journal")
     issue = models.CharField(max_length=10, null=True, blank=True, help_text="The volume number of the journal")
     page_range = models.CharField(max_length=20, null=True, blank=True,
                                   help_text="The page range with a dash ('-') as separator (e.g. 234-256)")
+    publishing_status = models.CharField(max_length=30, choices=STATUS_CHOICES, null=True, blank=True,
+                                         help_text="The status of the article with regard to journal")
     publisher = models.CharField(max_length=100, null=True, blank=True, help_text="The name of the publisher")
     publication_location = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
                                             help_text="The country where it was published")

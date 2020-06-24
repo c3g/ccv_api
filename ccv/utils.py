@@ -4,10 +4,18 @@ from collections import defaultdict
 
 
 def normalize_string(s: str) -> str:
+    """
+    :param s:
+    :return:
+    """
     return s.strip()
 
 
 def parse_integer(s: str) -> int or None:
+    """
+    :param s:
+    :return:
+    """
     int(s) if isinstance(s, str) and len(s) > 0 else None
 
 
