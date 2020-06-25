@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 from django.core.management.base import BaseCommand, CommandError
 
 from ccv.models import CanadianCommonCv, Identification, CountryOfCitizenship, LanguageSkill, Address, Website, \
-    Telephone, Email, Education, Degree, Supervisor, Credential, Recognition, ResearchCentre, UserProfile, \
+    Telephone, Email, Education, Degree, Supervisor, Credential, Recognition, UserProfile, \
     ResearchSpecializationKeyword, ResearchCentre, TechnologicalApplication, DisciplineTrainedIn, TemporalPeriod, \
     GeographicalRegion, Employment, AcademicWorkExperience, NonAcademicWorkExperience, Affiliation, LeavesOfAbsence, \
     ResearchFundingHistory, ResearchUptakeHolder, ResearchSetting, FundingSource, FundingByYear, OtherInvestigator, \
@@ -20,7 +20,6 @@ from ccv.models import CanadianCommonCv, Identification, CountryOfCitizenship, L
     TheatrePerformanceAndProduction, VideoRecording, VisualArtwork, SoundDesign, SetDesign, LightDesign, Choreography, \
     MuseumExhibition, PerformanceArt, Poetry, OtherArtisticContribution, MusicalCompilation, Broadcast, \
     MajorPerformanceDate, PerformanceDate
-
 from ccv.utils import etree_to_dict, parse_integer
 
 
@@ -263,8 +262,74 @@ class Command(BaseCommand):
 
         return True
 
-    def save_area_of_research(self, areas: list) -> bool:
-        pass
+    def save_area_of_research(self, areas: list, ref_obj, ref_key: str) -> bool:
+        """
+        :param areas:
+        :param ref_obj:
+        :param ref_key:
+        :return:
+        """
+
+        if isinstance(areas, list) and len(areas) == 0:
+            return False
+        for area in areas:
+            obj = {
+                "order": area["Order"],
+                "sector": area["Area of Research"]["Area of Research"]["Sector of Research"],
+                "field": area["Area of Research"]["Area of Research"]["Field"],
+                "subfield": area["Area of Research"]["Area of Research"]["Subfield"],
+                "area": area["Area of Research"]["Area of Research"]["Area"],
+            }
+            obj.update({ref_key: ref_obj})
+
+            AreaOfResearch(**obj).save()
+        return True
+
+    def save_research_discipline(self, disciplines: list, ref_obj, ref_key: str) -> bool:
+        """
+        :param disciplines:
+        :param ref_obj:
+        :param ref_key:
+        :return:
+        """
+        if isinstance(disciplines, list) and len(disciplines) == 0:
+            return False
+
+        for discipline in disciplines:
+            obj = {
+                "order": discipline["Order"],
+                "field": discipline["Research Discipline"]["Research Discipline"]["Field"],
+                "sector_of_discipline": discipline["Research Discipline"]["Research Discipline"]["Sector of Discipline"],
+                "discipline": discipline["Research Discipline"]["Research Discipline"]["Discipline"],
+            }
+            obj.update({ref_key: ref_obj})
+
+            ResearchDiscipline(**obj).save()
+
+        return True
+
+    def save_field_of_application(self, fields: list, ref_obj, ref_key: str) -> bool:
+        """
+        :param fields:
+        :param ref_obj:
+        :param ref_key:
+        :return:
+        """
+        if isinstance(fields, list) and len(fields) == 0:
+            return False
+
+        for field in fields:
+
+            obj = {
+                "order": field["Order"],
+                "field": field["Field of Application"]["Field of Application"]["Field of Application"],
+                "subfield": field["Field of Application"]["Field of Application"]["Subfield"],
+            }
+            obj.update({ref_key: ref_obj})
+
+            FieldOfApplication(**obj).save()
+
+        return True
 
     def get_organization_obj(self, obj):
 
@@ -336,7 +401,6 @@ class Command(BaseCommand):
                 self.save_funding_source(presentation, presentation_obj)
 
             # Interview & Media Relations
-
             for interview_and_media_relation in contribution.get('Interviews and Media Relations', []):
 
                 for broadcast_interview in interview_and_media_relation.get('Broadcast Interviews', []):
@@ -373,7 +437,6 @@ class Command(BaseCommand):
                     self.save_funding_source(text_interview, text_interview_obj)
 
             # publications
-
             for publication in contribution.get('Publications', []):
 
                 publication_obj = Publication(
@@ -1187,7 +1250,282 @@ class Command(BaseCommand):
 
         return True
 
+    def save_personal_information(self, personal_informations: list) -> bool:
+        """
+        :param personal_informations:
+        :return:
+        """
+        for personal_information in personal_informations:
+            for identification in personal_information.get('Identification', []):
 
+                self.identification_obj = Identification(
+                    title=identification["Title"],
+                    family_name=identification["Family Name"],
+                    first_name=identification["First Name"],
+                    middle_name=identification["Middle Name"],
+                    previous_family_name=identification["Previous Family Name"],
+                    previous_first_name=identification["Previous First Name"],
+                    date_of_birth=identification["Date of Birth"],
+                    sex=identification["Sex"],
+                    designated_group=identification["Designated Group"],
+                    correspondence_language=identification["Correspondence language"],
+                    canadian_residency_status=identification["Canadian Residency Status"],
+                    permanent_residency=identification["Applied for Permanent Residency?"],
+                    permanent_residency_start_date=self.parse_datetime(identification["Permanent Residency Start Date"],
+                                                                       "%Y-%m-d"),
+                    ccv=self.ccv
+                )
+                self.identification_obj.save()
+
+                for country in identification.get('Country of Citizenship', []):
+
+                    CountryOfCitizenship(
+                        name=country['Country of Citizenship'],
+                        identification=self.identification_obj
+                    ).save()
+
+            for language_skill in personal_information.get("Language Skills", []):
+                LanguageSkill(
+                    language=language_skill["Language"],
+                    can_read=self.parse_boolean(language_skill["Read"]),
+                    can_speak=self.parse_boolean(language_skill["Speak"]),
+                    can_write=self.parse_boolean(language_skill["Write"]),
+                    can_understand=self.parse_boolean(language_skill["Understand"]),
+                    peer_review=self.parse_boolean(language_skill["Peer Review"]),
+                    personal_information=self.identification_obj
+                ).save()
+
+            for address in personal_information.get("Address", []):
+                Address(
+                    type=address["Address Type"],
+                    line_1=address["Address - Line 1"],
+                    line_2=address["Line 2"],
+                    line_3=address["Line 3"],
+                    line_4=address["Line 4"],
+                    line_5=address["Line 5"],
+                    city=address["City"],
+                    country=address["Location"]["Country-Subdivision"]["Country"],
+                    subdivision=address["Location"]["Country-Subdivision"]["Subdivision"],
+                    postal=address["Postal / Zip Code"],
+                    start_date=self.parse_datetime(address["Address Start Date"], "%Y-%m-%d"),
+                    end_date=self.parse_datetime(address["Address End Date"], "%Y-%m-%d"),
+                    personal_information=self.identification_obj
+                ).save()
+
+            for telephone in personal_information.get("Telephone", []):
+
+                Telephone(
+                    phone_type=telephone["Phone Type"],
+                    country_code=telephone["Country Code"],
+                    area_code=telephone["Area Code"],
+                    number=telephone["Telephone Number"],
+                    extension=telephone["Extension"],
+                    start_date=self.parse_datetime(telephone["Telephone Start Date"], "%Y-%m-%d"),
+                    end_date=self.parse_datetime(telephone["Telephone End Date"], "%Y-%m-%d"),
+                    personal_information=self.identification_obj
+                ).save()
+
+            for email in personal_information.get("Email", []):
+                Email(
+                    type=email["Email Type"],
+                    address=email["Email Address"],
+                    start_date=self.parse_datetime(email["Email Start Date"], "%Y/%m"),
+                    end_date=self.parse_datetime(email["Email End Date"], "%Y/%m"),
+                    personal_information=self.identification_obj
+                ).save()
+
+            for website in personal_information.get("Website", []):
+                Website(
+                    type=website["Website Type"],
+                    url=website["URL"],
+                    personal_information=self.identification_obj
+                ).save()
+
+        return True
+
+    def save_education(self, educations: list) -> bool:
+        """
+        :param educations:
+        :return:
+        """
+
+        for education in educations:
+
+            education_obj = Education(
+                ccv=self.ccv
+            )
+            education_obj.save()
+
+            for degree in education.get('Degrees', []):
+
+                org_obj = self.get_organization_obj(degree)
+
+                degree_obj = Degree(
+                    type=degree["Degree Type"],
+                    name=degree["Degree Name"],
+                    organization=org_obj,
+                    specialization=degree["Specialization"],
+                    thesis_title=degree["Thesis Title"],
+                    status=degree["Degree Status"],
+                    start_date=self.parse_datetime(degree["Degree Start Date"], "%Y/%m"),
+                    end_date=self.parse_datetime(degree["Degree Received Date"], "%Y/%m"),
+                    expected_date=self.parse_datetime(degree["Degree Expected Date"], "%Y/%m"),
+                    phd_without_masters=self.parse_boolean(degree["Transferred to PhD without completing Masters?"]),
+                    education_id=education_obj.id
+                )
+                degree_obj.save()
+
+                self.save_area_of_research(degree.get('Areas of Research', []),
+                                           degree_obj, "degree")
+                self.save_research_discipline(degree.get('Research Disciplines', []),
+                                              degree_obj, "degree")
+                self.save_field_of_application(degree.get('Fields of Application', []),
+                                               degree_obj, "degree")
+
+                for supervisor in education.get("Supervisors", []):
+                    Supervisor(
+                        name=supervisor["Supervisor Name"],
+                        start_date=self.parse_datetime(supervisor["Start Date"], "%Y/%m"),
+                        end_date=self.parse_datetime(supervisor["End Date"], "%Y/%m"),
+                        degree=degree_obj
+                    ).save()
+
+            for credential in self.final_data["Education"][0].get("Credentials", []):
+                org_obj = self.get_organization_obj(credential)
+                credential_obj = Credential(
+                    title=credential["Title"],
+                    organization=org_obj,
+                    effective_date=self.parse_datetime(credential["Effective Date"], "%Y/%m"),
+                    end_date=self.parse_datetime(credential["End Date"], "%Y/%m"),
+                    description=credential["Description"],
+                    education_id=education_obj.id
+                )
+                credential_obj.save()
+
+                self.save_area_of_research(credential.get('Areas of Research', []),
+                                           credential_obj, "credential")
+                self.save_research_discipline(credential.get('Research Disciplines', []),
+                                              credential_obj, "credential")
+                self.save_field_of_application(credential.get('Fields of Application', []),
+                                               credential_obj, "credential")
+
+        return True
+
+    def save_recognitions(self, recognitions: list) -> bool:
+        """
+        :param recognitions:
+        :return:
+        """
+        for recognition in recognitions:
+
+            org_obj = self.get_organization_obj(recognition)
+            recognition_obj = Recognition(
+                type=recognition["Recognition Type"],
+                name=recognition["Recognition Name"],
+                organization=org_obj,
+                effective_date=self.parse_datetime(recognition["Effective Date"], "%Y/%m"),
+                end_date=self.parse_datetime(recognition["End Date"], "%Y/%m"),
+                amount=parse_integer(recognition.get("Amount")),
+                currency=recognition["Currency"],
+                description=recognition["Description"],
+                ccv=self.ccv
+            )
+            recognition_obj.save()
+
+            self.save_area_of_research(recognition.get('Areas of Research', []),
+                                       recognition_obj, "recognition")
+            self.save_research_discipline(recognition.get('Research Disciplines', []),
+                                          recognition_obj, "recognition")
+            self.save_field_of_application(recognition.get('Fields of Application', []),
+                                           recognition_obj, "recognition")
+
+        return True
+
+    def save_user_profile(self, user_profiles: list) -> bool:
+        """
+        :param user_profiles:
+        :return:
+        """
+
+        for user_profile in user_profiles:
+
+            user_profile_obj = UserProfile(
+                researcher_status=self.final_data["User Profile"][0]["Researcher Status"],
+                career_start_date=self.parse_datetime(self.final_data["User Profile"][0]["Research Career Start Date"],
+                                                      "%Y-%m-%d"),
+                engaged_in_clinical_research=self.parse_boolean(
+                    self.final_data["User Profile"][0]["Engaged in Clinical Research?"]),
+                key_theory=self.final_data["User Profile"][0]["Key Theory / Methodology"],
+                research_interest=self.final_data["User Profile"][0]["Research Interests"],
+                experience_summary=self.final_data["User Profile"][0]["Research Experience Summary"],
+                # country=self.final_data["User Profile"][""],
+                ccv=self.ccv
+            )
+            user_profile_obj.save()
+
+            self.save_field_of_application(user_profile.get('Fields of Application', []),
+                                           user_profile_obj, "user_profile")
+            self.save_research_discipline(user_profile.get('Research Disciplines', []),
+                                          user_profile_obj, "user_profile")
+            self.save_area_of_research(user_profile.get('Areas of Research', []),
+                                       user_profile_obj, "user_profile")
+
+            for research_specialization_keyword in \
+                    user_profile.get("Research Specialization Keywords", []):
+                ResearchSpecializationKeyword(
+                    keyword=research_specialization_keyword["Research Specialization Keywords"],
+                    order=parse_integer(research_specialization_keyword["Order"]),
+                    user_profile=user_profile_obj
+                ).save()
+
+            for research_centre in user_profile.get("Research Centres", []):
+                research_centre = research_centre["Research Centre"]["Research Centre"]
+
+                ResearchCentre(
+                    name=research_centre["Research Centre"],
+                    country=research_centre["Country"],
+                    subdivision=research_centre["Subdivision"],
+                    user_profile=user_profile_obj,
+                    order=parse_integer(research_centre["Order"])
+                ).save()
+
+            for discipline in user_profile.get("Disciplines Trained In", []):
+                DisciplineTrainedIn(
+                    order=parse_integer(discipline["Order"]),
+                    sector=discipline["Discipline Trained In"]["Research Discipline"]["Sector of Discipline"],
+                    fields=discipline["Discipline Trained In"]["Research Discipline"]["Field"],
+                    discipline=discipline["Discipline Trained In"]["Research Discipline"]["Discipline"],
+                    user_profile=user_profile_obj
+                ).save()
+
+            for temporal_period in user_profile.get('Temporal Periods', []):
+                TemporalPeriod(
+                    order=parse_integer(temporal_period['Order']),
+                    from_year=temporal_period['From Year'],
+                    from_year_period=temporal_period['From Year Period'],
+                    to_year=temporal_period['To Year'],
+                    to_year_period=temporal_period['To Year Period'],
+                    user_profile=user_profile_obj
+                ).save()
+
+            for geographical_region in user_profile.get('Geographical Regions', []):
+                GeographicalRegion(
+                    order=geographical_region['Order'],
+                    region=geographical_region['Geographical Region'],
+                    user_profile=user_profile
+                ).save()
+
+            for technological_app in user_profile.get('Technological Applications', []):
+                t = technological_app['Technological Application']['Technological Application']
+                TechnologicalApplication(
+                    order=technological_app['Order'],
+                    category=t['Technological Application Category'],
+                    subfield=t['Subfield'],
+                    user_profile=user_profile_obj
+                ).save()
+
+            # country
+        return True
 
     def save_to_db(self):
 
@@ -1195,246 +1533,50 @@ class Command(BaseCommand):
         self.ccv.save()
         self.stdout.write(f"{self.ccv.id}")
 
-        # identification
+        # Personal Information
+        if "Personal Information" in self.final_data and \
+                isinstance(self.final_data["Personal Information"], list):
+            self.save_personal_information(self.final_data['Personal Information'])
 
-        for i in self.final_data["Personal Information"][0]["Identification"]:
-            self.identification = Identification(
-                title=i["Title"],
-                family_name=i["Family Name"],
-                first_name=i["First Name"],
-                middle_name=i["Middle Name"],
-                previous_family_name=i["Previous Family Name"],
-                previous_first_name=i["Previous First Name"],
-                date_of_birth=i["Date of Birth"],
-                sex=i["Sex"],
-                designated_group=i["Designated Group"],
-                correspondence_language=i["Correspondence language"],
-                canadian_residency_status=i["Canadian Residency Status"],
-                permanent_residency=i["Applied for Permanent Residency?"],
-                permanent_residency_start_date=self.parse_datetime(i["Permanent Residency Start Date"], ""),
-                ccv=self.ccv
-            )
-            self.identification.save()
+        # Education
+        if "Education" in self.final_data and \
+                isinstance(self.final_data["Education"], list):
+            self.save_education(self.final_data['Education'])
 
-        # country of citizenship
+        # Recognitions
+        if "Recognitions" in self.final_data and \
+                isinstance(self.final_data["Recognitions"], list):
+            self.save_recognitions(self.final_data['Recognitions'])
 
-        # language skills
+        # User Profile
+        if "User Profile" in self.final_data and \
+                isinstance(self.final_data["User Profile"], list):
+            self.save_user_profile(self.final_data['User Profile'])
 
-        for i in self.final_data["Personal Information"][0]["Language Skills"]:
-            LanguageSkill(
-                language=i["Language"],
-                can_read=self.parse_boolean(i["Read"]),
-                can_speak=self.parse_boolean(i["Speak"]),
-                can_write=self.parse_boolean(i["Write"]),
-                can_understand=self.parse_boolean(i["Understand"]),
-                peer_review=self.parse_boolean(i["Peer Review"]),
-                personal_information=self.identification
-            ).save()
-
-        # address
-
-        for i in self.final_data["Personal Information"][0]["Address"]:
-            Address(
-                type=i["Address Type"],
-                line_1=i["Address - Line 1"],
-                line_2=i["Line 2"],
-                line_3=i["Line 3"],
-                line_4=i["Line 4"],
-                line_5=i["Line 5"],
-                city=i["City"],
-                country=i["Location"]["Country-Subdivision"]["Country"],
-                subdivision=i["Location"]["Country-Subdivision"]["Subdivision"],
-                postal=i["Postal / Zip Code"],
-                start_date=self.parse_datetime(i["Address Start Date"], "%Y-%m-%d"),
-                end_date=self.parse_datetime(i["Address End Date"], "%Y-%m-%d"),
-                personal_information=self.identification
-            ).save()
-
-        # # telephone
-        #
-
-        for i in self.final_data["Personal Information"][0]["Telephone"]:
-            Telephone(
-                phone_type=i["Phone Type"],
-                country_code=i["Country Code"],
-                area_code=i["Area Code"],
-                number=i["Telephone Number"],
-                extension=i["Extension"],
-                start_date=self.parse_datetime(i["Telephone Start Date"], "%Y-%m-%d"),
-                end_date=self.parse_datetime(i["Telephone End Date"], "%Y-%m-%d"),
-                personal_information=self.identification
-            ).save()
-
-        # email
-
-        for i in self.final_data["Personal Information"][0]["Email"]:
-            Email(
-                type=i["Email Type"],
-                address=i["Email Address"],
-                start_date=self.parse_datetime(i["Email Start Date"], "%Y/%m"),
-                end_date=self.parse_datetime(i["Email End Date"], "%Y/%m"),
-                personal_information=self.identification
-            ).save()
-
-        # website
-        for i in self.final_data["Personal Information"][0]["Website"]:
-            Website(
-                type=i["Website Type"],
-                url=i["URL"],
-                personal_information=self.identification
-            ).save()
-
-        # education
-
-        self.education = Education(ccv=self.ccv)
-        self.education.save()
-
-        # degree
-
-        for i in self.final_data["Education"][0]["Degrees"]:
-            degree = Degree(
-                type=i["Degree Type"],
-                name=i["Degree Name"],
-                specialization=i["Specialization"],
-                thesis_title=i["Thesis Title"],
-                status=i["Degree Status"],
-                start_date=self.parse_datetime(i["Degree Start Date"], "%Y/%m"),
-                end_date=self.parse_datetime(i["Degree Received Date"], "%Y/%m"),
-                expected_date=self.parse_datetime(i["Degree Expected Date"], "%Y/%m"),
-                phd_without_masters=self.parse_boolean(i["Transferred to PhD without completing Masters?"]),
-                education_id=self.education.id
-            )
-            degree.save()
-
-            for supervisor in i.get("Supervisors", []):
-                Supervisor(
-                    name=supervisor["Supervisor Name"],
-                    start_date=self.parse_datetime(supervisor["Start Date"], "%Y/%m"),
-                    end_date=self.parse_datetime(supervisor["End Date"], "%Y/%m"),
-                    degree=degree
-                ).save()
-
-        for credential in self.final_data["Education"][0].get("Credentials", []):
-            Credential(
-                title=credential["Title"],
-                effective_date=self.parse_datetime(credential["Effective Date"], "%Y/%m"),
-                end_date=self.parse_datetime(credential["End Date"], "%Y/%m"),
-                description=credential["Description"],
-                education_id=self.education.id
-            )
-
-        # recognitions
-        # self.stdout.write(f"----------{self.final_data.get('Recognitions')}")
-        #
-        # self.final_data["Recognitions"] = [self.final_data.get("Recognitions")]
-
-        for recognition in self.final_data.get("Recognitions", []):
-            # self.stdout.write(f"----------{recognition}")
-            Recognition(
-                type=recognition["Recognition Type"],
-                name=recognition["Recognition Name"],
-                effective_date=self.parse_datetime(recognition["Effective Date"], "%Y/%m"),
-                end_date=self.parse_datetime(recognition["End Date"], "%Y/%m"),
-                amount=recognition.get("Amount"),
-                currency=recognition["Currency"],
-                description=recognition["Description"],
-                ccv=self.ccv
-            ).save()
-
-        user_profile = UserProfile(
-            researcher_status=self.final_data["User Profile"][0]["Researcher Status"],
-            career_start_date=self.parse_datetime(self.final_data["User Profile"][0]["Research Career Start Date"],
-                                                  "%Y-%m-%d"),
-            engaged_in_clinical_research=self.parse_boolean(
-                self.final_data["User Profile"][0]["Engaged in Clinical Research?"]),
-            key_theory=self.final_data["User Profile"][0]["Key Theory / Methodology"],
-            research_interest=self.final_data["User Profile"][0]["Research Interests"],
-            experience_summary=self.final_data["User Profile"][0]["Research Experience Summary"],
-            # country=self.final_data["User Profile"][""],
-            ccv=self.ccv
-        )
-        user_profile.save()
-
-        for research_specialization_keyword in \
-                self.final_data["User Profile"][0].get("Research Specialization Keywords", []):
-            ResearchSpecializationKeyword(
-                keyword=research_specialization_keyword["Research Specialization Keywords"],
-                order=research_specialization_keyword["Order"],
-                user_profile=user_profile
-            ).save()
-
-        for research_centre in self.final_data["User Profile"][0].get("Research Centres", []):
-            research_centre = research_centre["Research Centre"]["Research Centre"]
-
-            ResearchCentre(
-                name=research_centre["Research Centre"],
-                country=research_centre["Country"],
-                subdivision=research_centre["Subdivision"],
-                user_profile=user_profile
-            ).save()
-
-        for discipline in self.final_data["User Profile"][0]["Disciplines Trained In"]:
-            DisciplineTrainedIn(
-                # order=discipline["Order"]
-                sector=discipline["Discipline Trained In"]["Research Discipline"]["Sector of Discipline"],
-                fields=discipline["Discipline Trained In"]["Research Discipline"]["Field"],
-                discipline=discipline["Discipline Trained In"]["Research Discipline"]["Discipline"],
-                user_profile=user_profile
-            ).save()
-
-        for research_discipline in self.final_data["User Profile"][0]["Research Disciplines"]:
-            ResearchDiscipline(
-                order=research_discipline["Order"],
-                field=research_discipline["Research Discipline"]["Research Discipline"]["Field"],
-                sector_of_discipline=research_discipline["Research Discipline"]["Research Discipline"][
-                    "Sector of Discipline"],
-                discipline=research_discipline["Research Discipline"]["Research Discipline"]["Discipline"],
-                user_profile=user_profile
-            ).save()
-
-        for area in self.final_data["User Profile"][0]["Areas of Research"]:
-            AreaOfResearch(
-                order=area["Order"],
-                sector=area["Area of Research"]["Area of Research"]["Sector of Research"],
-                field=area["Area of Research"]["Area of Research"]["Field"],
-                subfield=area["Area of Research"]["Area of Research"]["Subfield"],
-                area=area["Area of Research"]["Area of Research"]["Area"],
-                user_profile=user_profile
-            ).save()
-
-        for application in self.final_data["User Profile"][0]["Fields of Application"]:
-            FieldOfApplication(
-                order=application["Order"],
-                field=application["Field of Application"]["Field of Application"]["Field of Application"],
-                subfield=application["Field of Application"]["Field of Application"]["Subfield"],
-                user_profile=user_profile
-            ).save()
-
-        # employment
-
-        # for i in self.final_data["Education"][""]
-
+        # Employment
         if "Employment" in self.final_data and \
                 isinstance(self.final_data["Employment"], list):
             self.save_employments(self.final_data['Employment'])
 
+        # Research Funding Histories
         if "Research Funding History" in self.final_data and \
                 isinstance(self.final_data["Research Funding History"], list):
             self.save_research_funding_history(self.final_data['Research Funding History'])
 
-        if "Most Significant Contributions" in self.final_data and \
-                isinstance(self.final_data['Most Significant Contributions'], list):
-            self.save_most_significant_contribution(self.final_data['Most Significant Contributions'])
-
+        # Memberships
         if "Memberships" in self.final_data and \
                 isinstance(self.final_data['Memberships'], list):
             self.save_memberships(self.final_data['Memberships'])
 
+        # Most Significant Contributions
+        if "Most Significant Contributions" in self.final_data and \
+                isinstance(self.final_data['Most Significant Contributions'], list):
+            self.save_most_significant_contribution(self.final_data['Most Significant Contributions'])
+
+        # Contributions
         if "Contributions" in self.final_data and \
                 isinstance(self.final_data['Contributions'], list):
             self.save_contributions(self.final_data['Contributions'])
-
-    # def save_employment(self):
 
     def handle(self, *args, **options):
 

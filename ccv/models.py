@@ -369,11 +369,18 @@ class UserProfile(Base):
     ccv = models.OneToOneField(CanadianCommonCv, on_delete=models.CASCADE)
 
 
-class ResearchSpecializationKeyword(Base):
-    """Keywords that best correspond to the person's expertise in research, creation, instrumentation and techniques"""
+class UserProfileAbstract(Base):
+    """"""
 
     order = models.IntegerField(null=True, blank=True,
                                 help_text="This field is used to order the entries. A value of 1 will show up at top.")
+
+    class Meta:
+        abstract = True
+
+class ResearchSpecializationKeyword(UserProfileAbstract):
+    """Keywords that best correspond to the person's expertise in research, creation, instrumentation and techniques"""
+
     keyword = models.CharField(max_length=50, null=True, blank=True)
 
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
@@ -383,7 +390,7 @@ class ResearchSpecializationKeyword(Base):
         super().save(*args, **kwargs)
 
 
-class ResearchCentre(Base):
+class ResearchCentre(UserProfileAbstract):
     """The research centres where most of the person's research is done."""
 
     name = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True)
@@ -393,7 +400,7 @@ class ResearchCentre(Base):
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
 
 
-class TechnologicalApplication(Base):
+class TechnologicalApplication(UserProfileAbstract):
     """The anticipated technological, industrial, social, cultural, organizational, educational, artistic and other
     applications of the person's research work """
 
@@ -411,7 +418,7 @@ class TechnologicalApplication(Base):
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
 
 
-class DisciplineTrainedIn(Base):
+class DisciplineTrainedIn(UserProfileAbstract):
     """The discipline is a field of knowledge which is taught at the university level and where it is
     institutionalized as a unit, like a department or a faculty. In this section select values that describe your
     expertise and experience related to your disciplinary training """
@@ -443,7 +450,7 @@ class DisciplineTrainedIn(Base):
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
 
 
-class TemporalPeriod(Base):
+class TemporalPeriod(UserProfileAbstract):
     """Indicate and rank the historical periods covered by your research interests, with #1 the most relevant."""
 
     YEAR_PERIOD_CHOICES = (
@@ -463,7 +470,7 @@ class TemporalPeriod(Base):
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
 
 
-class GeographicalRegion(Base):
+class GeographicalRegion(UserProfileAbstract):
     """Indicate and rank the geographical regions covered by your research interests, with #1 the most relevant."""
     REGION_CHOICES = (
         ('Africa', 'Africa'),
