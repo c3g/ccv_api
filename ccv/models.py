@@ -1399,7 +1399,10 @@ class ContributionFundingSource(Base):
     other_organization = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
                                           help_text="If someone cannot find the org from the list")
     reference_number = models.CharField(max_length=20, null=True, blank=True,
-                              help_text="reference number for the funds received")
+                                        help_text="reference number for the funds received")
+
+    def __str__(self):
+        return f"{self.organisation} - {self.reference_number}"
 
 
 class ContributionAbstract(Base):
@@ -1982,6 +1985,8 @@ class RadioAndTvProgram(ArtisticContributionAbstract):
     series_title = models.CharField(max_length=250, null=True, blank=True, help_text="The title of the series")
     publication_date = models.DateField(null=True, blank=True,
                                         help_text="The year and month the composition was published.")
+    publisher = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
+                                 help_text="The publisher of the composition")
     publication_location = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
                                             help_text="The place where the composition was published")
 
@@ -2076,6 +2081,9 @@ class SoundDesign(ArtisticContributionAbstract):
                              help_text="The venue in which the exhibition was given")
     opening_date = models.DateField(null=True, blank=True, help_text="The date of the opening of the performance")
 
+    artistic_contribution = models.ForeignKey(ArtisticContribution, on_delete=models.CASCADE)
+
+
 
 class SetDesign(ArtisticContributionAbstract):
     """Creations of theatrical, as well as film or television scenery (also known as stage design, scenic design or
@@ -2086,6 +2094,8 @@ class SetDesign(ArtisticContributionAbstract):
     venue = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True,
                              help_text="The venue in which the exhibition was given")
     opening_date = models.DateField(null=True, blank=True, help_text="The date of the opening of the performance")
+
+    artistic_contribution = models.ForeignKey(ArtisticContribution, on_delete=models.CASCADE)
 
 
 class LightDesign(ArtisticContributionAbstract):
