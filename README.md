@@ -47,9 +47,20 @@ CCV API is a Django-based backed system to query the available CCVs.
     ```
 ## Running server
 After following all installation steps, Run the Django server
-```
+```bash
 python3 manage.py runserver
 ```
+
+## Running Parser
+If the installation is suceessful and Django server is running, then the parser can be executed
+```bash
+python3 manage.py parse_ccv <ccv_xml_file_path>
+
+# For example
+python3 manage.py parse_ccv sample_ccv/ccv_sample_3.xml
+```
+The above command takes the XML file as input and ingests the data into the database.
+
 
 ## Running Tests
 

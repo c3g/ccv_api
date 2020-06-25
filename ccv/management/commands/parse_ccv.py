@@ -92,7 +92,10 @@ class Command(BaseCommand):
         :param format:
         :return:
         """
-        return datetime.datetime.strptime(date, format) if date else None
+        try:
+            return datetime.datetime.strptime(date, format) if date else None
+        except ValueError:
+            return None
 
     def save_organization(self, organization: dict):
         """
@@ -1450,14 +1453,14 @@ class Command(BaseCommand):
         for user_profile in user_profiles:
 
             user_profile_obj = UserProfile(
-                researcher_status=self.final_data["User Profile"][0]["Researcher Status"],
-                career_start_date=self.parse_datetime(self.final_data["User Profile"][0]["Research Career Start Date"],
+                researcher_status=user_profile["Researcher Status"],
+                career_start_date=self.parse_datetime(user_profile.get("Research Career Start Date"),
                                                       "%Y-%m-%d"),
                 engaged_in_clinical_research=self.parse_boolean(
-                    self.final_data["User Profile"][0]["Engaged in Clinical Research?"]),
-                key_theory=self.final_data["User Profile"][0]["Key Theory / Methodology"],
-                research_interest=self.final_data["User Profile"][0]["Research Interests"],
-                experience_summary=self.final_data["User Profile"][0]["Research Experience Summary"],
+                    user_profile.get("Engaged in Clinical Research?")),
+                key_theory=user_profile.get("Key Theory / Methodology"),
+                research_interest=user_profile.get("Research Interests"),
+                experience_summary=user_profile.get("Research Experience Summary"),
                 # country=self.final_data["User Profile"][""],
                 ccv=self.ccv
             )
@@ -1486,7 +1489,7 @@ class Command(BaseCommand):
                     country=research_centre["Country"],
                     subdivision=research_centre["Subdivision"],
                     user_profile=user_profile_obj,
-                    order=parse_integer(research_centre["Order"])
+                    order=parse_integer(research_centre.get("Order"))
                 ).save()
 
             for discipline in user_profile.get("Disciplines Trained In", []):
@@ -1519,8 +1522,8 @@ class Command(BaseCommand):
                 t = technological_app['Technological Application']['Technological Application']
                 TechnologicalApplication(
                     order=technological_app['Order'],
-                    category=t['Technological Application Category'],
-                    subfield=t['Subfield'],
+                    category=t.get('Technological Application Category'),
+                    subfield=t.get('Subfield'),
                     user_profile=user_profile_obj
                 ).save()
 

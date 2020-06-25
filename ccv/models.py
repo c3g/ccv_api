@@ -23,7 +23,7 @@ class Base(models.Model):
 
 
 class Organization(Base):
-    name = models.CharField(max_length=50, null=True, blank=True)
+    name = models.CharField(max_length=DEFAULT_COLUMN_LENGTH, null=True, blank=True)
     type = models.CharField(max_length=50, null=True, blank=True)
     country = models.CharField(max_length=50, null=True, blank=True)
     subdivision = models.CharField(max_length=50, null=True, blank=True)
