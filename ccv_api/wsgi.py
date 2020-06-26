@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 WSGI config for ccv_api project.
 
