@@ -3,21 +3,24 @@ import xml.etree.ElementTree as ET
 
 from django.core.management.base import BaseCommand, CommandError
 
-from ccv.models import CanadianCommonCv, Identification, CountryOfCitizenship, LanguageSkill, Address, Website, \
-    Telephone, Email, Education, Degree, Supervisor, Credential, Recognition, UserProfile, \
-    ResearchSpecializationKeyword, ResearchCentre, TechnologicalApplication, DisciplineTrainedIn, TemporalPeriod, \
-    GeographicalRegion, Employment, AcademicWorkExperience, NonAcademicWorkExperience, Affiliation, LeavesOfAbsence, \
-    ResearchFundingHistory, ResearchUptakeHolder, ResearchSetting, FundingSource, FundingByYear, OtherInvestigator, \
-    Membership, CommitteeMembership, OtherMembership, ResearchDiscipline, FieldOfApplication, AreaOfResearch, \
-    MostSignificantContribution, Organization, OtherOrganization, Contribution, Presentation, ConferencePublication, \
-    ContributionFundingSource, BroadcastInterview, TextInterview, Publication, Journal, Book, BookReview, BookChapter, \
-    Translation, ThesisDissertation, SupervisedStudentPublication, Litigation, NewspaperArticle, EncyclopediaEntry, \
-    MagazineEntry, DictionaryEntry, Report, WorkingPaper, Manual, OnlineResource, Test, ClinicalCareGuideline, \
-    IntellectualProperty, Patent, License, Disclosure, RegisteredCopyright, Trademark, ArtisticContribution, \
-    AudioRecording, ArtisticExhibition, ExhibitionCatalogue, MusicalPerformance, RadioAndTvProgram, Scripts, Fiction, \
-    TheatrePerformanceAndProduction, VideoRecording, VisualArtwork, SoundDesign, SetDesign, LightDesign, Choreography, \
-    MuseumExhibition, PerformanceArt, Poetry, OtherArtisticContribution, MusicalCompilation, Broadcast, \
-    MajorPerformanceDate, PerformanceDate
+from ccv.models.personal_information import CanadianCommonCv, Identification, CountryOfCitizenship, LanguageSkill, \
+    Address, Website, Telephone, Email
+from ccv.models.base import Organization, OtherOrganization
+from ccv.models.education import Education, Degree, Supervisor, Credential
+from ccv.models.recognitions import Recognition, FundingSource, FundingByYear, ResearchDiscipline, AreaOfResearch, \
+    FieldOfApplication, OtherMembership, ResearchSetting, ResearchUptakeHolder, OtherInvestigator, Membership, \
+    MostSignificantContribution, CommitteeMembership, ResearchFundingHistory
+from ccv.models.user_profile import UserProfile, ResearchSpecializationKeyword, ResearchCentre, DisciplineTrainedIn, \
+    TemporalPeriod, GeographicalRegion, TechnologicalApplication
+from ccv.models.employment import Employment, AcademicWorkExperience, NonAcademicWorkExperience, Affiliation, \
+    LeavesOfAbsence
+from ccv.models.contribution import Contribution, Presentation, ContributionFundingSource, BroadcastInterview, \
+    TextInterview, Publication, Journal, Book, ThesisDissertation, SupervisedStudentPublication, Litigation, \
+    NewspaperArticle, EncyclopediaEntry, MagazineEntry, IntellectualProperty,Patent, License, Disclosure, \
+    RegisteredCopyright, Trademark, ArtisticContribution, AudioRecording, ArtisticExhibition, ExhibitionCatalogue, \
+    MusicalPerformance, RadioAndTvProgram, Scripts, Fiction, TheatrePerformanceAndProduction, VideoRecording, \
+    VisualArtwork, SoundDesign, SetDesign, LightDesign, Choreography, MuseumExhibition, PerformanceArt, Poetry, \
+    OtherArtisticContribution, MusicalCompilation, Broadcast, MajorPerformanceDate, PerformanceDate
 from ccv.utils import etree_to_dict, parse_integer
 
 
@@ -1513,7 +1516,7 @@ class Command(BaseCommand):
                 GeographicalRegion(
                     order=geographical_region['Order'],
                     region=geographical_region['Geographical Region'],
-                    user_profile=user_profile
+                    user_profile=user_profile_obj
                 ).save()
 
             for technological_app in user_profile.get('Technological Applications', []):
