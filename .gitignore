@@ -173,7 +173,6 @@ dmypy.json
 # Ignore all local history of files
 .history
 
-
 # Virtual Environment
 venv/
 env/

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Django settings for ccv_api project.
 
