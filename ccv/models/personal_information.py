@@ -82,7 +82,7 @@ class LanguageSkill(Base):
     can_write = models.BooleanField(default=False)
     can_speak = models.BooleanField(default=False)
     can_understand = models.BooleanField(default=False)
-    peer_review = models.BooleanField(null=True, blank=True)
+    peer_review = models.NullBooleanField(null=True, blank=True)
 
     personal_information = models.ForeignKey(Identification, on_delete=models.CASCADE)
 
