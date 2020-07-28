@@ -16,7 +16,7 @@ from ccv.models.employment import Employment, AcademicWorkExperience, NonAcademi
     LeavesOfAbsence
 from ccv.models.contribution import Contribution, Presentation, ContributionFundingSource, BroadcastInterview, \
     TextInterview, Publication, Journal, Book, ThesisDissertation, SupervisedStudentPublication, Litigation, \
-    NewspaperArticle, EncyclopediaEntry, MagazineEntry, IntellectualProperty,Patent, License, Disclosure, \
+    NewspaperArticle, EncyclopediaEntry, MagazineEntry, IntellectualProperty, Patent, License, Disclosure, \
     RegisteredCopyright, Trademark, ArtisticContribution, AudioRecording, ArtisticExhibition, ExhibitionCatalogue, \
     MusicalPerformance, RadioAndTvProgram, Scripts, Fiction, TheatrePerformanceAndProduction, VideoRecording, \
     VisualArtwork, SoundDesign, SetDesign, LightDesign, Choreography, MuseumExhibition, PerformanceArt, Poetry, \
@@ -276,6 +276,7 @@ class Command(BaseCommand):
 
         if isinstance(areas, list) and len(areas) == 0:
             return False
+
         for area in areas:
             obj = {
                 "order": area["Order"],
@@ -303,7 +304,8 @@ class Command(BaseCommand):
             obj = {
                 "order": discipline["Order"],
                 "field": discipline["Research Discipline"]["Research Discipline"]["Field"],
-                "sector_of_discipline": discipline["Research Discipline"]["Research Discipline"]["Sector of Discipline"],
+                "sector_of_discipline":
+                    discipline["Research Discipline"]["Research Discipline"]["Sector of Discipline"],
                 "discipline": discipline["Research Discipline"]["Research Discipline"]["Discipline"],
             }
             obj.update({ref_key: ref_obj})
@@ -832,7 +834,7 @@ class Command(BaseCommand):
                     self.save_funding_source(radio_tv, radio_tv_obj)
 
                 for script in artistic_contribution.get('Scripts', []):
-                    
+
                     script_obj = Scripts(
                         title=script.get('title'),
                         publication_date=self.parse_datetime(script.get(''), '%Y/%m'),
@@ -848,7 +850,7 @@ class Command(BaseCommand):
                     self.save_funding_source(script, script_obj)
 
                 for fiction in artistic_contribution.get('Fiction', []):
-                    
+
                     fiction_obj = Fiction(
                         title=fiction.get('Title'),
                         appeared_in=fiction.get('Appeared In'),

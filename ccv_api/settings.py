@@ -10,36 +10,27 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
-import configparser
 import os
 import socket
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-config = configparser.ConfigParser(allow_no_value=True)
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
 
-# If the host name starts with 'ip', load configparser from "production.cfg"
-if socket.gethostname().startswith('ip'):
-    config.read(f'{PROJECT_DIR}/production.cfg')
-    print('production config')
-    ENV = 'PROD'
-else:
-    config.read(f'{PROJECT_DIR}/development.cfg')
-    print('development config')
-    ENV = 'DEV'
+# Load configs from .env file
+load_dotenv(dotenv_path='.env')
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config.get('security', 'SECRET_KEY')
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config.getboolean('general', 'DEBUG')
+DEBUG = os.getenv('DEBUG')
 
 ALLOWED_HOSTS = []
 
@@ -93,11 +84,11 @@ WSGI_APPLICATION = 'ccv_api.wsgi.application'
 DATABASES = {
      'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config.get('database', 'NAME'),
-        'USER': config.get('database', 'USER'),
-        'PASSWORD': config.get('database', 'PASSWORD'),
-        'HOST': config.get('database', 'HOST'),
-        'PORT': config.get('database', 'PORT')
+        'NAME': os.getenv('NAME'),
+        'USER': os.getenv('DB_USER'),
+        'PASSWORD': os.getenv('PASSWORD'),
+        'HOST': os.getenv('HOST'),
+        'PORT': os.getenv('PORT')
     }
 }
 
@@ -139,5 +130,3 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
 STATIC_URL = '/static/'
-
-CONFIG = config

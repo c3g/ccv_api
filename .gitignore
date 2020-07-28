@@ -179,3 +179,4 @@ env/
 .idea
 /ccv_api/development.cfg
 /ccv_api/production.cfg
+.env
