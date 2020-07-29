@@ -75,7 +75,7 @@ class TestParser(TestCase):
         """
         It tests the education entity of the ccv
         """
-        degrees = Degree.objects.filter(education__ccv__id=self.id)
+        degrees = Degree.objects.filter(education__ccv__id=self.id).order_by('id')
         sample_data = SAMPLE_TEST_CONSTANTS['education']['degrees']
 
         for index, degree in enumerate(degrees):
@@ -87,7 +87,7 @@ class TestParser(TestCase):
             assert normalize_date(degree.end_date, '%Y-%m-%d') == sample_data[index]['end_date']
             assert degree.phd_without_masters == sample_data[index]['phd_without_masters']
 
-        credentials = Credential.objects.filter(education__ccv__id=self.id)
+        credentials = Credential.objects.filter(education__ccv__id=self.id).order_by('id')
         sample_data = SAMPLE_TEST_CONSTANTS['education']['credentials']
 
         for index, credential in enumerate(credentials):
@@ -101,7 +101,7 @@ class TestParser(TestCase):
         :It tests the recognitions entity of the ccv:
         """
 
-        recognitions = Recognition.objects.filter(ccv_id=self.id)
+        recognitions = Recognition.objects.filter(ccv_id=self.id).order_by('id')
         sample_data = SAMPLE_TEST_CONSTANTS['recognitions']
 
         for index, recognition in enumerate(recognitions):
@@ -121,7 +121,7 @@ class TestParser(TestCase):
         membership = Membership.objects.get(ccv__id=self.id)
         assert isinstance(membership, Membership)
 
-        memberships = CommitteeMembership.objects.filter(membership__ccv__id=self.id)
+        memberships = CommitteeMembership.objects.filter(membership__ccv__id=self.id).order_by('id')
         sample_data = SAMPLE_TEST_CONSTANTS['memberships']['committee']
         for index, membership in enumerate(memberships):
             assert isinstance(membership, CommitteeMembership)
@@ -136,7 +136,7 @@ class TestParser(TestCase):
         It tests the most significant contributions entity of the ccv
         """
 
-        msc = MostSignificantContribution.objects.filter(ccv__id=self.id)
+        msc = MostSignificantContribution.objects.filter(ccv__id=self.id).order_by('id')
         sample_data = SAMPLE_TEST_CONSTANTS['most_significant_contribution']
 
         for index, m in enumerate(msc):
@@ -159,7 +159,7 @@ class TestParser(TestCase):
         assert user_profile.research_interest == sample_data['research_interest']
         assert user_profile.experience_summary == sample_data['experience_summary']
 
-        research_centres = ResearchCentre.objects.filter(user_profile__ccv__id=self.id)
+        research_centres = ResearchCentre.objects.filter(user_profile__ccv__id=self.id).order_by('id')
         sample_data = SAMPLE_TEST_CONSTANTS['user_profile']['research_centre']
         for index, research_centre in enumerate(research_centres):
             assert isinstance(research_centre, ResearchCentre)
@@ -168,7 +168,7 @@ class TestParser(TestCase):
             assert research_centre.country == sample_data[index]['country']
             assert research_centre.subdivision == sample_data[index]['subdivision']
 
-        disciplines_trained = DisciplineTrainedIn.objects.filter(user_profile__ccv__id=self.id)
+        disciplines_trained = DisciplineTrainedIn.objects.filter(user_profile__ccv__id=self.id).order_by('id')
         sample_data = SAMPLE_TEST_CONSTANTS['user_profile']['disciplines_trained']
         for index, discipline_trained in enumerate(disciplines_trained):
             assert isinstance(discipline_trained, DisciplineTrainedIn)
@@ -184,7 +184,7 @@ class TestParser(TestCase):
         employment = Employment.objects.get(ccv_id=self.id)
         assert isinstance(employment, Employment)
 
-        academic_work_experiences = AcademicWorkExperience.objects.filter(employment__ccv__id=self.id)
+        academic_work_experiences = AcademicWorkExperience.objects.filter(employment__ccv__id=self.id).order_by('id')
         sample_data = SAMPLE_TEST_CONSTANTS['employment']['academic_work_experiences']
         for index, academic_work_experience in enumerate(academic_work_experiences):
             assert isinstance(academic_work_experience, AcademicWorkExperience)
@@ -204,7 +204,8 @@ class TestParser(TestCase):
             assert normalize_date(academic_work_experience.tenure_end_date, '%Y-%m-%d') == \
                 sample_data[index]['tenure_end_date']
 
-        non_academic_work_experiences = NonAcademicWorkExperience.objects.filter(employment__ccv__id=self.id)
+        non_academic_work_experiences = NonAcademicWorkExperience.objects.filter(
+            employment__ccv__id=self.id).order_by('id')
         sample_data = SAMPLE_TEST_CONSTANTS['employment']['non_academic_work_experiences']
         for index, non_academic_work_experience in enumerate(non_academic_work_experiences):
             assert isinstance(non_academic_work_experience, NonAcademicWorkExperience)
