@@ -1537,7 +1537,6 @@ class Command(BaseCommand):
 
         self.ccv = CanadianCommonCv(**{})
         self.ccv.save()
-        self.stdout.write(f"{self.ccv.id}")
 
         # Personal Information
         if "Personal Information" in self.final_data and \
@@ -1583,6 +1582,8 @@ class Command(BaseCommand):
         if "Contributions" in self.final_data and \
                 isinstance(self.final_data['Contributions'], list):
             self.save_contributions(self.final_data['Contributions'])
+
+        self.stdout.write(f"{self.ccv.id}")
 
     def handle(self, *args, **options):
 

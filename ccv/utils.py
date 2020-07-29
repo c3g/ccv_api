@@ -1,3 +1,4 @@
+import datetime
 from collections import defaultdict
 
 
@@ -43,3 +44,14 @@ def etree_to_dict(t) -> dict:
         else:
             d[t.tag] = text
     return d
+
+
+def normalize_date(datetime_obj, fmt) -> str:
+    """
+    :param datetime_obj:
+    :param fmt:
+    :return: it returns the formatted datetime
+    """
+    if not datetime_obj:
+        return None
+    return datetime.datetime.strftime(datetime_obj, fmt)

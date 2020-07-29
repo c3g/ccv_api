@@ -84,11 +84,11 @@ WSGI_APPLICATION = 'ccv_api.wsgi.application'
 DATABASES = {
      'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('PASSWORD'),
-        'HOST': os.getenv('HOST'),
-        'PORT': os.getenv('PORT')
+        'NAME': os.getenv('PG_DBNAME'),
+        'USER': os.getenv('PG_DB_USER'),
+        'PASSWORD': os.getenv('PG_DB_PASSWORD'),
+        'HOST': os.getenv('PG_DB_HOST'),
+        'PORT': os.getenv('PG_DB_PORT')
     }
 }
 
@@ -128,5 +128,6 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
+
 
 STATIC_URL = '/static/'
