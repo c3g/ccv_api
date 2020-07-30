@@ -10,38 +10,33 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
-import configparser
 import os
 import socket
+from dotenv import load_dotenv
+from django.core.management.utils import get_random_secret_key
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-config = configparser.ConfigParser(allow_no_value=True)
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
 
-# If the host name starts with 'ip', load configparser from "production.cfg"
-if socket.gethostname().startswith('ip'):
-    config.read(f'{PROJECT_DIR}/production.cfg')
-    print('production config')
-    ENV = 'PROD'
-else:
-    config.read(f'{PROJECT_DIR}/development.cfg')
-    print('development config')
-    ENV = 'DEV'
+# Load configs from .env file
+load_dotenv(dotenv_path='.env')
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config.get('security', 'SECRET_KEY')
+SECRET_KEY = os.getenv('SECRET_KEY', get_random_secret_key())
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config.getboolean('general', 'DEBUG')
+DEBUG = os.getenv('DEBUG', "True").lower() == "true"
+CCV_HOST = os.getenv('CCV_HOST', 'localhost')
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [CCV_HOST or "localhost"]
+if DEBUG:
+    ALLOWED_HOSTS = list(set(ALLOWED_HOSTS + ["localhost", "127.0.0.1", "[::1]"]))
 
 
 # Application definition
@@ -93,11 +88,11 @@ WSGI_APPLICATION = 'ccv_api.wsgi.application'
 DATABASES = {
      'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config.get('database', 'NAME'),
-        'USER': config.get('database', 'USER'),
-        'PASSWORD': config.get('database', 'PASSWORD'),
-        'HOST': config.get('database', 'HOST'),
-        'PORT': config.get('database', 'PORT')
+        'NAME': os.getenv('PG_DBNAME'),
+        'USER': os.getenv('PG_DB_USER'),
+        'PASSWORD': os.getenv('PG_DB_PASSWORD'),
+        'HOST': os.getenv('PG_DB_HOST'),
+        'PORT': os.getenv('PG_DB_PORT')
     }
 }
 
@@ -138,6 +133,5 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
-STATIC_URL = '/static/'
 
-CONFIG = config
+STATIC_URL = '/static/'

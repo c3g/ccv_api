@@ -16,7 +16,7 @@ from ccv.models.employment import Employment, AcademicWorkExperience, NonAcademi
     LeavesOfAbsence
 from ccv.models.contribution import Contribution, Presentation, ContributionFundingSource, BroadcastInterview, \
     TextInterview, Publication, Journal, Book, ThesisDissertation, SupervisedStudentPublication, Litigation, \
-    NewspaperArticle, EncyclopediaEntry, MagazineEntry, IntellectualProperty,Patent, License, Disclosure, \
+    NewspaperArticle, EncyclopediaEntry, MagazineEntry, IntellectualProperty, Patent, License, Disclosure, \
     RegisteredCopyright, Trademark, ArtisticContribution, AudioRecording, ArtisticExhibition, ExhibitionCatalogue, \
     MusicalPerformance, RadioAndTvProgram, Scripts, Fiction, TheatrePerformanceAndProduction, VideoRecording, \
     VisualArtwork, SoundDesign, SetDesign, LightDesign, Choreography, MuseumExhibition, PerformanceArt, Poetry, \
@@ -140,7 +140,6 @@ class Command(BaseCommand):
             return False
 
         for research_history in research_histories:
-
             research_history_obj = ResearchFundingHistory(
                 funding_type=research_history.get('Funding Type'),
                 start_date=self.parse_datetime(research_history.get('Funding Start Date'), '%Y/%m'),
@@ -157,14 +156,12 @@ class Command(BaseCommand):
             research_history_obj.save()
 
             for stakeholder in research_history.get('Research Uptake Stakeholders', []):
-
                 ResearchUptakeHolder(
                     stakeholder=stakeholder.get('Stakeholder'),
                     research_funding_history=research_history_obj
                 ).save()
 
             for research_setting in research_history.get('Research Settings', []):
-
                 ResearchSetting(
                     country=research_setting.get('Location', {}).get('Country-Subdivision', {}).get('Country'),
                     subdivision=research_setting.get('Location', {}).get('Country-Subdivision', {}).get('Subdivision'),
@@ -173,7 +170,6 @@ class Command(BaseCommand):
                 ).save()
 
             for funding_source in research_history.get('Funding Sources', []):
-
                 FundingSource(
                     organization=funding_source.get('Funding Organization'),
                     other_organization=funding_source.get('Other Funding Organization'),
@@ -191,7 +187,6 @@ class Command(BaseCommand):
                 ).save()
 
             for funding_by_year in research_history.get('Funding by Year', []):
-
                 FundingByYear(
                     start_date=self.parse_datetime(funding_by_year.get('Start Date'), '%Y/%m'),
                     end_date=self.parse_datetime(funding_by_year.get('End Date'), '%Y/%m'),
@@ -204,7 +199,6 @@ class Command(BaseCommand):
                 ).save()
 
             for other_investigator in research_history.get('Other Investigators', []):
-
                 OtherInvestigator(
                     name=other_investigator.get('Investigator Name'),
                     role=other_investigator.get('Role'),
@@ -221,7 +215,6 @@ class Command(BaseCommand):
             return False
 
         for membership in memberships:
-
             membership_obj = Membership(
                 ccv=self.ccv
             )
@@ -276,6 +269,7 @@ class Command(BaseCommand):
 
         if isinstance(areas, list) and len(areas) == 0:
             return False
+
         for area in areas:
             obj = {
                 "order": area["Order"],
@@ -303,7 +297,8 @@ class Command(BaseCommand):
             obj = {
                 "order": discipline["Order"],
                 "field": discipline["Research Discipline"]["Research Discipline"]["Field"],
-                "sector_of_discipline": discipline["Research Discipline"]["Research Discipline"]["Sector of Discipline"],
+                "sector_of_discipline":
+                    discipline["Research Discipline"]["Research Discipline"]["Sector of Discipline"],
                 "discipline": discipline["Research Discipline"]["Research Discipline"]["Discipline"],
             }
             obj.update({ref_key: ref_obj})
@@ -323,7 +318,6 @@ class Command(BaseCommand):
             return False
 
         for field in fields:
-
             obj = {
                 "order": field["Order"],
                 "field": field["Field of Application"]["Field of Application"]["Field of Application"],
@@ -376,7 +370,6 @@ class Command(BaseCommand):
             return False
 
         for contribution in contributions:
-
             contribution_obj = Contribution(
                 ccv=self.ccv
             )
@@ -384,7 +377,6 @@ class Command(BaseCommand):
 
             # presentation
             for presentation in contribution.get('Presentations', []):
-
                 presentation_obj = Presentation(
                     title=presentation.get('Presentation Title'),
                     event_name=presentation.get('Conference / Event Name'),
@@ -406,9 +398,7 @@ class Command(BaseCommand):
 
             # Interview & Media Relations
             for interview_and_media_relation in contribution.get('Interviews and Media Relations', []):
-
                 for broadcast_interview in interview_and_media_relation.get('Broadcast Interviews', []):
-
                     broadcast_obj = BroadcastInterview(
                         topic=broadcast_interview.get('Topic'),
                         interviewer=broadcast_interview.get('Interviewer'),
@@ -426,7 +416,6 @@ class Command(BaseCommand):
                     self.save_funding_source(broadcast_interview, broadcast_obj)
 
                 for text_interview in interview_and_media_relation.get('Text Interviews', []):
-
                     text_interview_obj = TextInterview(
                         topic=text_interview.get('Topic'),
                         interviewer=text_interview.get('Interviewer'),
@@ -442,14 +431,12 @@ class Command(BaseCommand):
 
             # publications
             for publication in contribution.get('Publications', []):
-
                 publication_obj = Publication(
                     contribution=contribution_obj
                 )
                 publication_obj.save()
 
                 for journal_article in publication.get('Journal Articles', []):
-
                     journal_article_obj = Journal(
                         title=journal_article.get('Article Title'),
                         journal=journal_article.get('Journal'),
@@ -480,7 +467,6 @@ class Command(BaseCommand):
                     self.save_funding_source(journal_article, journal_article_obj)
 
                 for journal_issue in publication.get('Journal Issues', []):
-
                     journal_issue_obj = Journal(
                         title=journal_issue.get('Article Title'),
                         journal=journal_issue.get('Journal'),
@@ -510,7 +496,6 @@ class Command(BaseCommand):
                     self.save_funding_source(journal_issue, journal_issue_obj)
 
                 for book in publication.get('Books', []):
-
                     book_obj = Book(
                         title=book.get('Book Title'),
                         # # #
@@ -537,7 +522,6 @@ class Command(BaseCommand):
                 # # # #
 
                 for thesis in publication.get('Thesis/Dissertation', []):
-
                     org_obj = self.get_organization_obj(thesis)
                     thesis_obj = ThesisDissertation(
                         title=thesis.get('Dissertation Title'),
@@ -559,7 +543,6 @@ class Command(BaseCommand):
                     self.save_funding_source(thesis, thesis_obj)
 
                 for student_publication in publication.get('Supervised Student Publications', []):
-
                     student_publication_obj = SupervisedStudentPublication(
                         student=student_publication.get('Student'),
                         title=student_publication.get('Publication Title'),
@@ -582,7 +565,6 @@ class Command(BaseCommand):
                     self.save_funding_source(student_publication, student_publication_obj)
 
                 for litigation in publication.get('Litigations', []):
-
                     litigation_obj = Litigation(
                         title=litigation.get('Case Name'),
                         person_acted_for=litigation.get('Person Acted For'),
@@ -603,7 +585,6 @@ class Command(BaseCommand):
                     self.save_funding_source(litigation, litigation_obj)
 
                 for article in publication.get('Newspaper Articles', []):
-
                     article_obj = NewspaperArticle(
                         title=article.get('Article Title'),
                         newspaper=article.get('Page Range'),
@@ -629,7 +610,6 @@ class Command(BaseCommand):
                 #
 
                 for encyclopedia_entry in publication.get('Encyclopedia Entries', []):
-
                     encyclopedia_entry_obj = EncyclopediaEntry(
                         title=encyclopedia_entry.get('Entry Title'),
                         name=encyclopedia_entry.get('Encyclopedia Name'),
@@ -655,7 +635,6 @@ class Command(BaseCommand):
                     self.save_funding_source(encyclopedia_entry, encyclopedia_entry_obj)
 
                 for magazine in publication.get('Magazine Entries', []):
-
                     magazine_obj = MagazineEntry(
                         title=magazine.get('Article Title'),
                         name=magazine.get('Magazine Name'),
@@ -706,7 +685,6 @@ class Command(BaseCommand):
 
             # Artistic Contributions
             for artistic_contribution in contribution.get('Artistic Contributions', []):
-
                 artistic_contribution_obj = ArtisticContribution(
                     contribution=contribution_obj
                 )
@@ -729,7 +707,6 @@ class Command(BaseCommand):
                     self.save_funding_source(exhibition, exhibition_obj)
 
                 for audio_recording in artistic_contribution.get('Audio Recordings', []):
-
                     audio_recording_obj = AudioRecording(
                         title=audio_recording.get('Piece Title'),
                         album_title=audio_recording.get('Album Title'),
@@ -748,7 +725,6 @@ class Command(BaseCommand):
                     self.save_funding_source(audio_recording, audio_recording_obj)
 
                 for exhibition in artistic_contribution.get('Exhibition Catalogues', []):
-
                     exhibition_obj = ExhibitionCatalogue(
                         title=exhibition.get('Catalogue Title'),
                         gallery_publisher=exhibition.get('Gallery / Publisher'),
@@ -768,7 +744,6 @@ class Command(BaseCommand):
                     self.save_funding_source(exhibition, exhibition_obj)
 
                 for musical_composition in artistic_contribution.get('Musical Compositions', []):
-
                     musical_composition_obj = MusicalCompilation(
                         title=musical_composition.get('Composition Title'),
                         instrumentation_tags=musical_composition.get('Instrumentation Tags'),
@@ -788,7 +763,6 @@ class Command(BaseCommand):
                     self.save_funding_source(musical_composition, musical_composition_obj)
 
                 for musical_performance in artistic_contribution.get('Musical Performances', []):
-
                     musical_performance_obj = MusicalPerformance(
                         title=musical_performance.get('Title of work'),
                         venue=musical_performance.get('Venue'),
@@ -806,7 +780,6 @@ class Command(BaseCommand):
                     self.save_funding_source(musical_performance, musical_performance_obj)
 
                 for radio_tv in artistic_contribution.get('Radio and TV Programs', []):
-
                     radio_tv_obj = RadioAndTvProgram(
                         title=radio_tv.get('Program Title'),
                         episode_title=radio_tv.get('Episode Title'),
@@ -832,7 +805,6 @@ class Command(BaseCommand):
                     self.save_funding_source(radio_tv, radio_tv_obj)
 
                 for script in artistic_contribution.get('Scripts', []):
-                    
                     script_obj = Scripts(
                         title=script.get('title'),
                         publication_date=self.parse_datetime(script.get(''), '%Y/%m'),
@@ -848,7 +820,6 @@ class Command(BaseCommand):
                     self.save_funding_source(script, script_obj)
 
                 for fiction in artistic_contribution.get('Fiction', []):
-                    
                     fiction_obj = Fiction(
                         title=fiction.get('Title'),
                         appeared_in=fiction.get('Appeared In'),
@@ -870,7 +841,6 @@ class Command(BaseCommand):
                     self.save_funding_source(fiction, fiction_obj)
 
                 for theatre_performance in artistic_contribution.get('Theatre Performances and Productions', []):
-
                     theatre_performance_obj = TheatrePerformanceAndProduction(
                         title=theatre_performance.get('Title of Work'),
                         producer=theatre_performance.get('Producer'),
@@ -906,7 +876,6 @@ class Command(BaseCommand):
                     self.save_funding_source(video_recording, video_recording_obj)
 
                 for visual_artwork in artistic_contribution.get('Visual Artworks', []):
-
                     visual_artwork_obj = VisualArtwork(
                         title=visual_artwork.get('Artwork Title'),
                         publication_date=self.parse_datetime(visual_artwork.get('Publication Date'), '%Y/%m'),
@@ -922,7 +891,6 @@ class Command(BaseCommand):
                     self.save_funding_source(visual_artwork, visual_artwork_obj)
 
                 for sound_design in artistic_contribution.get('Sound Design', []):
-
                     sound_design_obj = SoundDesign(
                         title=sound_design.get('Show Title'),
                         writer=sound_design.get('Writer'),
@@ -941,7 +909,6 @@ class Command(BaseCommand):
                     self.save_funding_source(sound_design, sound_design_obj)
 
                 for set_design in artistic_contribution.get('Set Design', []):
-
                     set_design_obj = SetDesign(
                         title=set_design.get('Show Title'),
                         writer=set_design.get('Writer'),
@@ -960,7 +927,6 @@ class Command(BaseCommand):
                     self.save_funding_source(set_design, set_design_obj)
 
                 for light_design in artistic_contribution.get('Set Design', []):
-
                     light_design_obj = LightDesign(
                         title=light_design.get('Show Title'),
                         writer=light_design.get('Writer'),
@@ -979,7 +945,6 @@ class Command(BaseCommand):
                     self.save_funding_source(light_design, light_design_obj)
 
                 for choreography in artistic_contribution.get("Choreography", []):
-
                     choreography_obj = Choreography(
                         title=choreography.get('Show Title'),
                         composer=choreography.get('Composer'),
@@ -1004,7 +969,6 @@ class Command(BaseCommand):
                     self.save_funding_source(choreography, choreography_obj)
 
                 for museum_exhibition in artistic_contribution.get('Museum Exhibitions', []):
-
                     museum_exhibition_obj = MuseumExhibition(
                         title=museum_exhibition.get('Exhibition Title'),
                         venue=museum_exhibition.get('Venue'),
@@ -1023,7 +987,6 @@ class Command(BaseCommand):
                     self.save_funding_source(museum_exhibition, museum_exhibition_obj)
 
                 for performance_art in artistic_contribution.get('Performance Art', []):
-
                     performance_obj = PerformanceArt(
                         title=performance_art.get('Exhibition Title'),
                         venue=performance_art.get('Venue'),
@@ -1045,7 +1008,6 @@ class Command(BaseCommand):
                     self.save_funding_source(performance_art, performance_obj)
 
                 for poetry in artistic_contribution.get('Poetry', []):
-
                     poetry_obj = Poetry(
                         title=poetry.get('Title'),
                         venue=poetry.get('poetry'),
@@ -1086,14 +1048,12 @@ class Command(BaseCommand):
 
             # Intellectual Property
             for intellectual_property in contribution.get('Intellectual Property', []):
-
                 intellectual_property_obj = IntellectualProperty(
                     contribution=contribution_obj
                 )
                 intellectual_property_obj.save()
 
                 for patent in intellectual_property.get('Patents', []):
-
                     patent_obj = Patent(
                         title=patent.get('Patent Title'),
                         number=patent.get('Patent Number'),
@@ -1112,7 +1072,6 @@ class Command(BaseCommand):
                     self.save_funding_source(patent, patent_obj)
 
                 for license in intellectual_property.get('Licenses', []):
-
                     license_obj = License(
                         title=license.get('License Title'),
                         status=license.get('License Status'),
@@ -1128,7 +1087,6 @@ class Command(BaseCommand):
                     self.save_funding_source(license, license_obj)
 
                 for disclosure in intellectual_property.get('Disclosures', []):
-
                     disclosure_obj = Disclosure(
                         title=disclosure.get('Disclosure Title'),
                         status=disclosure.get('Disclosure Status'),
@@ -1144,7 +1102,6 @@ class Command(BaseCommand):
                     self.save_funding_source(disclosure, disclosure_obj)
 
                 for registered_copyright in intellectual_property.get('Registered Copyrights', []):
-
                     registered_copyright_obj = RegisteredCopyright(
                         title=registered_copyright.get('Copyright Title'),
                         status=registered_copyright.get('Copyright Status'),
@@ -1160,7 +1117,6 @@ class Command(BaseCommand):
                     self.save_funding_source(registered_copyright, registered_copyright_obj)
 
                 for trademark in intellectual_property.get('Trademarks', []):
-
                     trademark_obj = Trademark(
                         title=trademark.get('Trademark Title'),
                         status=trademark.get('Trademark Status'),
@@ -1186,14 +1142,12 @@ class Command(BaseCommand):
             return False
 
         for employment in employments:
-
             employment_obj = Employment(
                 ccv=self.ccv
             )
             employment_obj.save()
 
             for academic_work_experience in employment.get('Academic Work Experience', []):
-
                 org_obj = self.get_organization_obj(academic_work_experience)
                 AcademicWorkExperience(
                     position_type=academic_work_experience.get('Position Type'),
@@ -1227,7 +1181,6 @@ class Command(BaseCommand):
                 ).save()
 
             for affiliation in employment.get('Affiliations', []):
-
                 org_obj = self.get_organization_obj(affiliation)
 
                 Affiliation(
@@ -1261,7 +1214,6 @@ class Command(BaseCommand):
         """
         for personal_information in personal_informations:
             for identification in personal_information.get('Identification', []):
-
                 self.identification_obj = Identification(
                     title=identification["Title"],
                     family_name=identification["Family Name"],
@@ -1282,7 +1234,6 @@ class Command(BaseCommand):
                 self.identification_obj.save()
 
                 for country in identification.get('Country of Citizenship', []):
-
                     CountryOfCitizenship(
                         name=country['Country of Citizenship'],
                         identification=self.identification_obj
@@ -1317,7 +1268,6 @@ class Command(BaseCommand):
                 ).save()
 
             for telephone in personal_information.get("Telephone", []):
-
                 Telephone(
                     phone_type=telephone["Phone Type"],
                     country_code=telephone["Country Code"],
@@ -1354,14 +1304,12 @@ class Command(BaseCommand):
         """
 
         for education in educations:
-
             education_obj = Education(
                 ccv=self.ccv
             )
             education_obj.save()
 
             for degree in education.get('Degrees', []):
-
                 org_obj = self.get_organization_obj(degree)
 
                 degree_obj = Degree(
@@ -1421,7 +1369,6 @@ class Command(BaseCommand):
         :return:
         """
         for recognition in recognitions:
-
             org_obj = self.get_organization_obj(recognition)
             recognition_obj = Recognition(
                 type=recognition["Recognition Type"],
@@ -1452,7 +1399,6 @@ class Command(BaseCommand):
         """
 
         for user_profile in user_profiles:
-
             user_profile_obj = UserProfile(
                 researcher_status=user_profile["Researcher Status"],
                 career_start_date=self.parse_datetime(user_profile.get("Research Career Start Date"),
@@ -1535,7 +1481,6 @@ class Command(BaseCommand):
 
         self.ccv = CanadianCommonCv(**{})
         self.ccv.save()
-        self.stdout.write(f"{self.ccv.id}")
 
         # Personal Information
         if "Personal Information" in self.final_data and \
@@ -1581,6 +1526,8 @@ class Command(BaseCommand):
         if "Contributions" in self.final_data and \
                 isinstance(self.final_data['Contributions'], list):
             self.save_contributions(self.final_data['Contributions'])
+
+        self.stdout.write(f"{self.ccv.id}")
 
     def handle(self, *args, **options):
 

@@ -63,4 +63,8 @@ The above command takes the XML file as input and ingests the data into the data
 
 
 ## Running Tests
+To run tests, run this command
+```bash
+tox -e pytest
+```
 
