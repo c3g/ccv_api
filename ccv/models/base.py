@@ -34,3 +34,6 @@ class CanadianCommonCv(Base):
 
     _id = models.UUIDField(max_length=40, db_index=True, editable=False, default=uuid.uuid4)
     slug = models.SlugField(help_text="Short label to be used in URL")
+
+    class Meta:
+        ordering = ["-id"]

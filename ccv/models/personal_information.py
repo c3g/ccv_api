@@ -61,7 +61,7 @@ class Identification(Base):
                                            null=True, blank=True)
     permanent_residency_start_date = models.DateField(null=True, blank=True)
 
-    ccv = models.OneToOneField(CanadianCommonCv, on_delete=models.CASCADE)
+    ccv = models.OneToOneField(CanadianCommonCv, on_delete=models.CASCADE, related_name="identification")
 
 
 class CountryOfCitizenship(Base):

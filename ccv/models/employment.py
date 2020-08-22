@@ -7,7 +7,7 @@ class Employment(Base):
     """Collection of information records that, in combination, represent the full and up-to-date history of the
     person's employment """
 
-    ccv = models.OneToOneField(CanadianCommonCv, on_delete=models.CASCADE)
+    ccv = models.OneToOneField(CanadianCommonCv, on_delete=models.CASCADE, related_name='employment')
 
 
 class AcademicWorkExperience(Base):
@@ -63,7 +63,7 @@ class AcademicWorkExperience(Base):
     organization = models.OneToOneField(Organization, on_delete=models.CASCADE, null=True, blank=True)
     other_organization = models.OneToOneField(OtherOrganization, on_delete=models.CASCADE, null=True, blank=True, )
 
-    employment = models.ForeignKey(Employment, on_delete=models.CASCADE)
+    employment = models.ForeignKey(Employment, on_delete=models.CASCADE, related_name='academic_work_experience')
 
 
 class NonAcademicWorkExperience(Base):

@@ -25,7 +25,7 @@ class UserProfile(Base):
                                           help_text="summary of research experience")
     # country = ArrayField(models.CharField(max_length=DEFAULT_COLUMN_LENGTH), null=True, blank=True, default=list)
 
-    ccv = models.OneToOneField(CanadianCommonCv, on_delete=models.CASCADE)
+    ccv = models.OneToOneField(CanadianCommonCv, on_delete=models.CASCADE, related_name='user_profile')
 
 
 class UserProfileAbstract(Base):
