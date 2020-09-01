@@ -360,19 +360,23 @@ class AreaOfResearch(Base):
     order = models.IntegerField(null=True, blank=True,
                                 help_text="This field is used to order the entries. A value of 1 will show up at top.")
 
-    degree = models.ForeignKey(Degree, null=True, blank=True, on_delete=models.CASCADE)
-    credential = models.ForeignKey(Credential, null=True, blank=True, on_delete=models.CASCADE)
-    recognition = models.ForeignKey(Recognition, null=True, blank=True, on_delete=models.CASCADE)
+    degree = models.ForeignKey(Degree, null=True, blank=True, on_delete=models.CASCADE, related_name="degree_aor")
+    credential = models.ForeignKey(Credential, null=True, blank=True, on_delete=models.CASCADE,
+                                   related_name="credential_aor")
+    recognition = models.ForeignKey(Recognition, null=True, blank=True, on_delete=models.CASCADE,
+                                    related_name="recognition_aor")
     research_funding_history = models.ForeignKey(ResearchFundingHistory, null=True, blank=True,
-                                                 on_delete=models.CASCADE)
+                                                 on_delete=models.CASCADE, related_name="funding_history_aor")
     academic_work_experience = models.ForeignKey(AcademicWorkExperience, null=True, blank=True,
-                                                 on_delete=models.CASCADE)
+                                                 on_delete=models.CASCADE, related_name="academic_work_experience_aor")
     non_academic_work_experience = models.ForeignKey(NonAcademicWorkExperience, null=True, blank=True,
-                                                     on_delete=models.CASCADE)
-    user_profile = models.ForeignKey(UserProfile, null=True, blank=True,
-                                     on_delete=models.CASCADE)
+                                                     on_delete=models.CASCADE,
+                                                     related_name="non_academic_work_experience_aor")
+    user_profile = models.ForeignKey(UserProfile, null=True, blank=True, on_delete=models.CASCADE,
+                                     related_name="user_aor")
     research_funding_assessment_activity = models.ForeignKey(ResearchFundingApplicationAssessmentActivity,
-                                                             null=True, blank=True, on_delete=models.CASCADE)
+                                                             null=True, blank=True, on_delete=models.CASCADE,
+                                                             related_name="assessment_activity_aor")
 
     def save(self, *args, **kwargs):
         self.order = parse_integer(self.order)

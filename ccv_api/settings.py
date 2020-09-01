@@ -36,7 +36,7 @@ CCV_HOST = os.getenv('CCV_HOST', 'localhost')
 
 ALLOWED_HOSTS = [CCV_HOST or "localhost"]
 if DEBUG:
-    ALLOWED_HOSTS = list(set(ALLOWED_HOSTS + ["localhost", "127.0.0.1", "[::1]"]))
+    ALLOWED_HOSTS = list(set(ALLOWED_HOSTS + ["localhost", "testserver", "127.0.0.1", "[::1]"]))
 
 
 # Application definition
@@ -48,7 +48,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'ccv'
+    'ccv',
+    'rest_framework',
+    'drf_yasg'
 ]
 
 MIDDLEWARE = [
@@ -114,6 +116,12 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 5,
+    'TEST_REQUEST_DEFAULT_FORMAT': 'json'
+}
 
 
 # Internationalization
